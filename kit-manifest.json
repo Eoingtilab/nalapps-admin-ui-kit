@@ -1,0 +1,14 @@
+{
+  "name": "NalApps Admin UI Kit",
+  "version": "2.0.0",
+  "platform": "WordPress Admin",
+  "palette": "blue",
+  "required_docs": [
+    "docs/DESIGN-TOKENS.md",
+    "docs/WORDPRESS-INTEGRATION.md",
+    "docs/DO-NOT.md",
+    "docs/ACCEPTANCE-CHECKLIST.md"
+  ],
+  "adapter": "wordpress/class-nalapps-admin-ui-adapter.php",
+  "stylesheet": "assets/css/nalapps-admin-ui.css"
+}
