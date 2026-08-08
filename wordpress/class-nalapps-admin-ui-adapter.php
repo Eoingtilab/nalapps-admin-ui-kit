@@ -1,6 +1,6 @@
 <?php
 /**
- * NalApps Admin UI Kit v2.0 — reusable WordPress adapter template.
+ * NalApps Admin UI Kit v2.0.1 — reusable WordPress adapter template.
  *
  * Copy this file into the plugin and rename namespace/class/config values.
  * Do not place product business logic here.
@@ -29,6 +29,13 @@ final class NalApps_Admin_UI {
             self::STYLE_HANDLE,
             plugins_url('assets/css/nalapps-admin-ui.css', MY_PLUGIN_FILE),
             array(),
+            MY_PLUGIN_VERSION
+        );
+
+        wp_enqueue_style(
+            self::STYLE_HANDLE . '-typography',
+            plugins_url('assets/css/nalapps-admin-typography.css', MY_PLUGIN_FILE),
+            array(self::STYLE_HANDLE),
             MY_PLUGIN_VERSION
         );
 
@@ -61,7 +68,7 @@ final class NalApps_Admin_UI {
                     <span class="nalapps-brand__mark"><span class="dashicons dashicons-admin-generic"></span></span>
                     <span class="nalapps-brand__text">
                         <strong>MY PLUGIN NAME</strong>
-                        <small>NalApps Admin UI v2.0</small>
+                        <small>NalApps Admin UI v2.0.1</small>
                     </span>
                 </div>
                 <nav class="nalapps-nav" aria-label="플러그인 관리 메뉴">
