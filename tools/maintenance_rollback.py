@@ -1,0 +1,140 @@
+#!/usr/bin/env python3
+"""Generate NalApps pre-update code backup and rollback runtime."""
+from __future__ import annotations
+
+from scaffold_plugin import namespace_suffix, php_const_prefix
+
+
+def rollback_manager_class(profile: dict) -> str:
+    ns = namespace_suffix(profile["slug"])
+    slug = profile["slug"]
+    action = slug.replace("-", "_")
+    prefix = php_const_prefix(slug)
+    return f'''<?php
+/**
+ * Pre-update code backup and controlled rollback support.
+ *
+ * @package {ns}
+ */
+
+namespace EOINGTI\\Plugins\\{ns};
+
+if ( ! defined( 'ABSPATH' ) ) {{
+\texit;
+}}
+
+final class Rollback_Manager {{
+\tconst MAX_BACKUPS = 3;
+
+\tpublic function __construct() {{
+\t\tadd_filter( 'upgrader_pre_install', array( $this, 'backup_before_update' ), 10, 2 );
+\t\tadd_action( 'admin_post_{action}_rollback', array( $this, 'rollback' ) );
+\t}}
+
+\tpublic static function backup_directory() {{
+\t\t$uploads = wp_upload_dir();
+\t\t$token   = substr( hash_hmac( 'sha256', '{slug}|' . home_url(), wp_salt( 'auth' ) ), 0, 32 );
+\t\treturn trailingslashit( $uploads['basedir'] ) . '.nalapps-backups-' . $token . '/{slug}/code';
+\t}}
+
+\tpublic function backup_before_update( $response, $hook_extra ) {{
+\t\tif ( is_wp_error( $response ) ) {{
+\t\t\treturn $response;
+\t\t}}
+\t\t$plugin = isset( $hook_extra['plugin'] ) ? (string) $hook_extra['plugin'] : '';
+\t\tif ( plugin_basename( {prefix}_FILE ) !== $plugin ) {{
+\t\t\treturn $response;
+\t\t}}
+\t\t$backup = self::create_code_backup( 'pre-update' );
+\t\tif ( is_wp_error( $backup ) ) {{
+\t\t\treturn $backup;
+\t\t}}
+\t\t$snapshot = Data_Portability::create_snapshot( 'pre-update' );
+\t\tif ( is_wp_error( $snapshot ) ) {{
+\t\t\treturn $snapshot;
+\t\t}}
+\t\treturn $response;
+\t}}
+
+\tpublic static function create_code_backup( $reason = 'manual' ) {{
+\t\t$dir = self::backup_directory();
+\t\tif ( ! wp_mkdir_p( $dir ) ) {{
+\t\t\treturn new \\WP_Error( 'nalapps_rollback_dir', 'Could not create the rollback directory.' );
+\t\t}}
+\t\trequire_once ABSPATH . 'wp-admin/includes/class-pclzip.php';
+\t\t$filename = sanitize_file_name( gmdate( 'Ymd-His' ) . '-' . {prefix}_VERSION . '-' . sanitize_key( $reason ) . '.zip' );
+\t\t$path     = trailingslashit( $dir ) . $filename;
+\t\t$archive  = new \\PclZip( $path );
+\t\t$source   = untrailingslashit( {prefix}_PATH );
+\t\t$created  = $archive->create( $source, PCLZIP_OPT_REMOVE_PATH, dirname( $source ) );
+\t\tif ( 0 === $created ) {{
+\t\t\treturn new \\WP_Error( 'nalapps_rollback_zip', 'Could not create the rollback package.' );
+\t\t}}
+\t\tself::protect_directory();
+\t\tself::prune_backups();
+\t\treturn $filename;
+\t}}
+
+\tpublic static function list_backups() {{
+\t\t$dir = self::backup_directory();
+\t\tif ( ! is_dir( $dir ) ) {{
+\t\t\treturn array();
+\t\t}}
+\t\t$files = glob( trailingslashit( $dir ) . '*.zip' );
+\t\tif ( ! is_array( $files ) ) {{
+\t\t\treturn array();
+\t\t}}
+\t\t$names = array_map( 'basename', $files );
+\t\trsort( $names, SORT_STRING );
+\t\treturn $names;
+\t}}
+
+\tpublic function rollback() {{
+\t\tif ( ! current_user_can( 'update_plugins' ) ) {{
+\t\t\twp_die( esc_html( 'Insufficient permissions.' ) );
+\t\t}}
+\t\tcheck_admin_referer( '{action}_rollback' );
+\t\t$requested = isset( $_POST['backup'] ) ? sanitize_file_name( wp_unslash( $_POST['backup'] ) ) : '';
+\t\tif ( ! in_array( $requested, self::list_backups(), true ) ) {{
+\t\t\t$this->redirect( 'rollback_error' );
+\t\t}}
+\t\t$current_backup = self::create_code_backup( 'pre-rollback' );
+\t\t$data_snapshot  = Data_Portability::create_snapshot( 'pre-rollback' );
+\t\tif ( is_wp_error( $current_backup ) || is_wp_error( $data_snapshot ) ) {{
+\t\t\t$this->redirect( 'rollback_error' );
+\t\t}}
+\t\trequire_once ABSPATH . 'wp-admin/includes/file.php';
+\t\trequire_once ABSPATH . 'wp-admin/includes/class-wp-upgrader.php';
+\t\t$package  = trailingslashit( self::backup_directory() ) . $requested;
+\t\t$upgrader = new \\Plugin_Upgrader( new \\Automatic_Upgrader_Skin() );
+\t\t$result   = $upgrader->install( $package, array( 'overwrite_package' => true ) );
+\t\tdelete_site_transient( 'update_plugins' );
+\t\tif ( is_wp_error( $result ) || false === $result ) {{
+\t\t\t$this->redirect( 'rollback_error' );
+\t\t}}
+\t\t$this->redirect( 'rolled_back' );
+\t}}
+
+\tprivate static function protect_directory() {{
+\t\trequire_once ABSPATH . 'wp-admin/includes/file.php';
+\t\tglobal $wp_filesystem;
+\t\tif ( WP_Filesystem() ) {{
+\t\t\t$dir = self::backup_directory();
+\t\t\t$wp_filesystem->put_contents( trailingslashit( $dir ) . 'index.php', "<?php\\n// Silence is golden.\\n" );
+\t\t\t$wp_filesystem->put_contents( trailingslashit( $dir ) . '.htaccess', "Deny from all\\n" );
+\t\t}}
+\t}}
+
+\tprivate static function prune_backups() {{
+\t\t$files = self::list_backups();
+\t\tforeach ( array_slice( $files, self::MAX_BACKUPS ) as $name ) {{
+\t\t\twp_delete_file( trailingslashit( self::backup_directory() ) . $name );
+\t\t}}
+\t}}
+
+\tprivate function redirect( $state ) {{
+\t\twp_safe_redirect( admin_url( 'options-general.php?page={slug}-maintenance&state=' . sanitize_key( $state ) ) );
+\t\texit;
+\t}}
+}}
+'''
