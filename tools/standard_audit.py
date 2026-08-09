@@ -39,6 +39,8 @@ REQUIRED_FILES = [
     "phpcs.xml.dist",
     ".github/workflows/quality-gate.yml",
     ".github/workflows/tag-version.yml",
+    ".github/dependabot.yml",
+    ".github/CODEOWNERS",
 ]
 
 
@@ -109,6 +111,14 @@ def main() -> int:
     ]:
         if token not in cli:
             fail(f"canonical CLI missing governance contract: {token}")
+
+    codeowners = (ROOT / ".github/CODEOWNERS").read_text(encoding="utf-8")
+    if "@Eoingtilab" not in codeowners:
+        fail("EOINGTI Lab CODEOWNERS entry is missing")
+
+    quality = (ROOT / ".github/workflows/quality-gate.yml").read_text(encoding="utf-8")
+    if "wordpress/plugin-check-action@v1" not in quality:
+        fail("official WordPress Plugin Check must run in standard CI")
 
     tag_workflow = (ROOT / ".github/workflows/tag-version.yml").read_text(encoding="utf-8")
     if "Create immutable standard tag after validation" not in tag_workflow:
