@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.1.0
+- 선택형 `EDD License & Hybrid Updates` 공통 모듈 추가
+- WordPress 플러그인 페이지 기본 업데이트 알림용 updater template 추가
+- 플러그인 내부 업데이트 화면/수동 확인/즉시 업데이트 template 추가
+- EDD Software Licensing `get_version` API 계약 및 검증 기준 문서화
+- Composer `vendor/` 포함 GitHub Release ZIP 생성 workflow template 추가
+- 유료 플러그인 배포 시 Source ZIP 사용 금지 및 Update File 검증 규칙 추가
+- UI 디자인 계층과 EDD 라이선스/업데이트 비즈니스 계층은 분리 유지
+
 ## 2.0.1
 - Pretendard Variable을 NalApps 관리자 UI 기본 폰트로 지정
 - Pretendard 공식 jsDelivr variable dynamic subset 웹폰트 사용
