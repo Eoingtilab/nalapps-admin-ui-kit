@@ -1,0 +1,23 @@
+{
+  "plugin_name": "Example NalApps Paid Plugin",
+  "slug": "example-nalapps-paid-plugin",
+  "description": "Example paid WordPress plugin profile using EDD Software Licensing.",
+  "plugin_version": "0.1.0",
+  "requires_wp": "6.5",
+  "requires_php": "7.4",
+  "product_type": "edd_paid",
+  "frontend": true,
+  "database": false,
+  "cron": false,
+  "rest_api": false,
+  "external_api": true,
+  "file_upload": false,
+  "multisite": false,
+  "telemetry": "off",
+  "edd_download_id": 123,
+  "edd_store_url": "https://example.com/",
+  "plugin_uri": "https://eoingti.com/",
+  "support_uri": null,
+  "update_uri": "https://example.com/",
+  "requires_plugins": []
+}
