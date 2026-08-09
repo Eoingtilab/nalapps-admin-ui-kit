@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+from scaffold_maintenance import add_maintenance_runtime
 from scaffold_plugin import ROOT, write_file
 from scaffold_product import product_scaffold
 from validate_profile import validate_profile
@@ -138,6 +139,7 @@ Describe the change and why it is needed.
 - [ ] Product profile still matches the implementation.
 - [ ] Security/capability/nonce implications were reviewed.
 - [ ] Existing data and upgrade compatibility were considered.
+- [ ] Rollback/data backup/uninstall behavior was considered.
 - [ ] Tests or reproducible verification were added/updated.
 - [ ] Documentation/changelog was updated when behavior changed.
 - [ ] No secret, credential, customer data, private dump, or production backup is included.
@@ -170,6 +172,10 @@ Generated from `plugin-profile.json`. Generic static checks do not replace produ
 - Activation, deactivation and reactivation smoke test.
 - Capability/nonce failure tests for every mutation.
 - Existing settings/data preservation during supported upgrades.
+- Pre-update code backup and rollback package validation.
+- Data export/import round-trip validation for every declared data contract.
+- Uninstall policy tests for both preserve and explicit delete-all paths.
+- System information redaction check: no credentials, license keys, absolute secrets or customer data.
 - Admin/front-end regression tests for product-critical behavior.
 - Public repository secret/customer-data regression check.
 - Release package root and runtime dependency verification.
@@ -180,7 +186,7 @@ Generated from `plugin-profile.json`. Generic static checks do not replace produ
 
 ## Human release gate
 
-The final supported old-version → new-version upgrade path must be exercised on a disposable WordPress test site before a production release.
+The final supported old-version → new-version upgrade path must be exercised on a disposable WordPress test site before a production release. Code rollback and data restore must be tested separately when migrations or schema changes are involved.
 '''
 
 
@@ -213,6 +219,7 @@ def enrich_project(target: Path, profile: dict) -> None:
 def create_project(profile_path: Path, output: Path, clean: bool = False) -> Path:
     profile = validate_profile(profile_path)
     target = product_scaffold(profile_path, output, clean=clean)
+    add_maintenance_runtime(target, profile)
     enrich_project(target, profile)
     return target
 
