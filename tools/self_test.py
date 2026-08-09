@@ -29,6 +29,7 @@ CASES = {
         "multisite": False,
         "telemetry": "off",
         "release_mode": "manual",
+        "uninstall_policy": "preserve",
         "requires_plugins": [],
     },
     "paid-api": {
@@ -46,6 +47,7 @@ CASES = {
         "multisite": False,
         "telemetry": "off",
         "release_mode": "manual",
+        "uninstall_policy": "preserve",
         "edd_download_id": 999999,
         "edd_store_url": "https://example.com/",
         "update_uri": "https://example.com/",
@@ -66,6 +68,13 @@ CASES = {
         "multisite": True,
         "telemetry": "off",
         "release_mode": "manual",
+        "uninstall_policy": "preserve",
+        "data_contract": {
+            "options": ["nalapps_full_capability_settings"],
+            "site_options": ["nalapps_full_capability_network"],
+            "post_types": ["nalapps_record"],
+            "custom_tables": ["nalapps_records"],
+        },
         "requires_plugins": [],
     },
 }
@@ -86,6 +95,14 @@ EXPECTED = {
         "includes/class-upload-guard.php",
     ],
 }
+
+COMMON_MAINTENANCE = [
+    "includes/class-data-portability.php",
+    "includes/class-rollback-manager.php",
+    "includes/class-system-info.php",
+    "includes/class-maintenance-page.php",
+    "uninstall.php",
+]
 
 
 def assert_no_placeholders(root: Path) -> None:
@@ -132,6 +149,7 @@ def main() -> int:
             target / ".github/ISSUE_TEMPLATE/feature_request.yml",
             target / ".github/pull_request_template.md",
         ]
+        required += [target / relative for relative in COMMON_MAINTENANCE]
         for path in required:
             if not path.is_file():
                 raise AssertionError(f"Missing scaffold output: {path}")
@@ -142,6 +160,9 @@ def main() -> int:
         manifest = json.loads((target / "nalapps-standard-manifest.json").read_text(encoding="utf-8"))
         if manifest["standard_version"] != standard_version:
             raise AssertionError(f"Standard version mismatch for {name}")
+        for module in ("rollback", "data_portability", "safe_uninstall", "system_info"):
+            if module not in manifest["required_modules"]:
+                raise AssertionError(f"Common maintenance module missing: {module}")
         if profile["product_type"] == "free" and "edd_license" in manifest["required_modules"]:
             raise AssertionError("Free profile incorrectly selected EDD module")
         if profile["product_type"] == "edd_paid":
@@ -154,6 +175,29 @@ def main() -> int:
             if "edd_sl_sdk_registry" not in main_text or "Update_Manager" not in main_text:
                 raise AssertionError("Paid scaffold did not wire the EDD SDK and updater")
 
+        main_text = (target / f"{profile['slug']}.php").read_text(encoding="utf-8")
+        for class_name in ("Data_Portability", "Rollback_Manager", "System_Info", "Maintenance_Page"):
+            if class_name not in main_text:
+                raise AssertionError(f"Common maintenance runtime not wired: {class_name}")
+        uninstall_text = (target / "uninstall.php").read_text(encoding="utf-8")
+        if "delete_all" not in uninstall_text or "preserve" not in uninstall_text:
+            raise AssertionError("Uninstall preserve/delete-all gate is missing")
+        portability_text = (target / "includes/class-data-portability.php").read_text(encoding="utf-8")
+        if "nalapps-data-backup-v1" not in portability_text or "pre-import" not in portability_text:
+            raise AssertionError("Data portability/snapshot contract is missing")
+        rollback_text = (target / "includes/class-rollback-manager.php").read_text(encoding="utf-8")
+        if "upgrader_pre_install" not in rollback_text or "overwrite_package" not in rollback_text:
+            raise AssertionError("Pre-update backup/rollback contract is missing")
+        system_info_text = (target / "includes/class-system-info.php").read_text(encoding="utf-8")
+        if "debug_information" not in system_info_text:
+            raise AssertionError("Site Health system information integration is missing")
+
+        if name == "full-capability":
+            if "nalapps_full_capability_settings" not in portability_text or "nalapps_record" not in portability_text:
+                raise AssertionError("Declared data contract was not embedded into portability runtime")
+            if "nalapps_records" not in uninstall_text:
+                raise AssertionError("Declared custom table was not embedded into delete-all runtime")
+
         release_workflow = (target / ".github/workflows/release.yml").read_text(encoding="utf-8")
         if profile.get("release_mode", "manual") == "manual" and "workflow_dispatch" not in release_workflow:
             raise AssertionError("Manual release mode lost workflow_dispatch")
@@ -164,7 +208,7 @@ def main() -> int:
             raise AssertionError("EOINGTI Lab CODEOWNERS policy is missing")
         assert_no_placeholders(target)
 
-    print(f"PASS self_test cases={len(CASES)} standard={standard_version}")
+    print(f"PASS self_test cases={len(CASES)} standard={standard_version} maintenance=4")
     return 0
 
 
