@@ -7,6 +7,10 @@
   "properties": {
     "plugin_name": {"type": "string", "minLength": 1},
     "slug": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
+    "description": {"type": "string"},
+    "plugin_version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$"},
+    "requires_wp": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+(?:\\.[0-9]+)?$"},
+    "requires_php": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+(?:\\.[0-9]+)?$"},
     "product_type": {"enum": ["free", "edd_paid", "private"]},
     "frontend": {"type": "boolean"},
     "database": {"type": "boolean"},
@@ -17,9 +21,19 @@
     "multisite": {"type": "boolean"},
     "telemetry": {"enum": ["off", "opt_in"]},
     "edd_download_id": {"type": ["integer", "null"], "minimum": 1},
+    "edd_store_url": {"type": ["string", "null"], "format": "uri"},
     "plugin_uri": {"type": ["string", "null"], "format": "uri"},
     "support_uri": {"type": ["string", "null"], "format": "uri"},
-    "requires_plugins": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}
+    "update_uri": {"type": ["string", "null"], "format": "uri"},
+    "license": {"type": "string"},
+    "license_uri": {"type": ["string", "null"], "format": "uri"},
+    "requires_plugins": {"type": "array", "items": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"}, "uniqueItems": true}
   },
+  "allOf": [
+    {
+      "if": {"properties": {"product_type": {"const": "edd_paid"}}},
+      "then": {"required": ["edd_download_id", "edd_store_url"]}
+    }
+  ],
   "additionalProperties": false
 }
