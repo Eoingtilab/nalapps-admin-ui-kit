@@ -1,5 +1,13 @@
 # 적용 완료 체크리스트
 
+## Company / Metadata
+- [ ] Author가 `EOINGTI Lab`로 통일되어 있다.
+- [ ] Author URI가 `https://eoingti.com/`이다.
+- [ ] GitHub 저장소 owner가 `Eoingtilab`이다.
+- [ ] README에 EOINGTI Lab/어잉티연구소, eoingti.com, GitHub 저장소가 표시된다.
+- [ ] Plugin URI는 실제 제품 페이지 또는 `https://eoingti.com/`이며 존재하지 않는 URL을 추측해 넣지 않았다.
+- [ ] Version / Stable tag / GitHub tag·release / EDD version이 출시 시 서로 일치한다.
+
 ## Admin UI
 - [ ] 상단에 플러그인명과 NalApps 브랜드 영역이 보인다.
 - [ ] 관리 홈/목록/새로 추가/수정/설정 화면에서 같은 내부 메뉴가 유지된다.
@@ -56,6 +64,7 @@
 - [ ] PHP syntax/static sanity 검사를 통과한다.
 - [ ] 구버전 → 최신버전 실제 업데이트 경로를 최소 1회 검증했다.
 - [ ] 기존 데이터가 업데이트 후 유지된다.
-- [ ] UI Kit/Plugin Standard 버전을 플러그인 문서나 소스 주석에 기록했다.
+- [ ] Plugin Standard 버전을 플러그인 문서나 소스 주석에 기록했다.
+- [ ] README/소스/릴리스 자산에 secret 또는 개인 인증정보가 없다.
 
-모든 적용 제품은 `docs/WORDPRESS-PLUGIN-STANDARD.md`와 제품별 추가 계약을 함께 따른다.
+모든 적용 제품은 `docs/COMPANY-PROFILE.md`, `docs/PLUGIN-METADATA-STANDARD.md`, `docs/WORDPRESS-PLUGIN-STANDARD.md`와 제품별 추가 계약을 함께 따른다.
