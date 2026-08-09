@@ -1,0 +1,17 @@
+{
+  "plugin_name": "Example NalApps Plugin",
+  "slug": "example-nalapps-plugin",
+  "product_type": "free",
+  "frontend": true,
+  "database": false,
+  "cron": false,
+  "rest_api": false,
+  "external_api": false,
+  "file_upload": false,
+  "multisite": false,
+  "telemetry": "off",
+  "edd_download_id": null,
+  "plugin_uri": null,
+  "support_uri": null,
+  "requires_plugins": []
+}
