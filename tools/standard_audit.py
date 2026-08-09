@@ -18,9 +18,9 @@ REQUIRED_FILES = [
     "docs/EDD-LICENSE-AND-UPDATES.md", "docs/ACCEPTANCE-CHECKLIST.md",
     "docs/ISO-29119-25010-TEST-PLAN.md", "tools/validate_profile.py",
     "tools/scaffold_plugin.py", "tools/scaffold_complete.py", "tools/scaffold_product.py",
-    "tools/scaffold_maintenance.py", "tools/maintenance_data.py", "tools/maintenance_rollback.py",
-    "tools/maintenance_system.py", "tools/maintenance_uninstall.py", "tools/nalapps_plugin.py",
-    "tools/self_test.py", "tools/quality_contract_test.py", "tools/standard_audit.py",
+    "tools/scaffold_maintenance.py", "tools/maintenance_data.py", "tools/maintenance_license.py",
+    "tools/maintenance_rollback.py", "tools/maintenance_system.py", "tools/maintenance_uninstall.py",
+    "tools/nalapps_plugin.py", "tools/self_test.py", "tools/quality_contract_test.py", "tools/standard_audit.py",
     "tools/public_repo_guard.sh", "tools/release_manifest.py", "requirements-dev.txt",
     "composer.json", "phpcs.xml.dist", ".github/workflows/quality-gate.yml",
     ".github/workflows/plugin-check-free.yml", ".github/workflows/tag-version.yml",
@@ -83,14 +83,16 @@ def main() -> int:
     maintenance = "\n".join(
         (ROOT / path).read_text(encoding="utf-8")
         for path in [
-            "tools/scaffold_maintenance.py", "tools/maintenance_data.py", "tools/maintenance_rollback.py",
-            "tools/maintenance_system.py", "tools/maintenance_uninstall.py",
+            "tools/scaffold_maintenance.py", "tools/maintenance_data.py", "tools/maintenance_license.py",
+            "tools/maintenance_rollback.py", "tools/maintenance_system.py", "tools/maintenance_uninstall.py",
         ]
     )
     for token in [
         "upgrader_pre_install", "overwrite_package", "nalapps-data-backup-v1", "debug_information",
         "delete_all", "class-data-portability.php", "class-rollback-manager.php",
         "nalapps-switch", "nalapps-admin-ui.css", "refined_admin_ui",
+        "product_native_license_ui", "license_activation_ui", "activate_license",
+        "check_license", "deactivate_license", "Serial key",
     ]:
         if token not in maintenance:
             fail(f"maintenance scaffold missing contract: {token}")
