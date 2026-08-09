@@ -35,6 +35,12 @@ def fail(message: str) -> None:
     raise SystemExit(f"AUDIT_FAIL {message}")
 
 
+def require_tokens(text: str, tokens: list[str], label: str) -> None:
+    for token in tokens:
+        if token not in text:
+            fail(f"{label} missing contract: {token}")
+
+
 def main() -> int:
     for relative in REQUIRED_FILES:
         if not (ROOT / relative).is_file():
@@ -55,13 +61,15 @@ def main() -> int:
             fail(f"company profile drift: {key}")
 
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
-    for token in [
-        "Eoingtilab/nalapps-wordpress-plugin-standard", "https://eoingti.com/", "Plugin Profile",
-        "Public Repository Safety", "Testing / CI / Release", "EDD Software Licensing SDK",
-        "Rollback / Backup / Data Lifecycle",
-    ]:
-        if token not in readme:
-            fail(f"README missing canonical token: {token}")
+    require_tokens(
+        readme,
+        [
+            "Eoingtilab/nalapps-wordpress-plugin-standard", "https://eoingti.com/", "Plugin Profile",
+            "Public Repository Safety", "Testing / CI / Release", "EDD Software Licensing SDK",
+            "Rollback / Backup / Data Lifecycle",
+        ],
+        "README",
+    )
 
     schema = json.loads((ROOT / "profiles/plugin-profile.schema.json").read_text(encoding="utf-8"))
     if schema.get("additionalProperties") is not False:
@@ -73,13 +81,15 @@ def main() -> int:
         fail("plugin profile schema must require EDD fields for paid products")
 
     product_scaffold = (ROOT / "tools/scaffold_product.py").read_text(encoding="utf-8")
-    for token in [
-        "easy-digital-downloads/edd-sl-sdk", "edd_sl_sdk_registry", "class-license.php",
-        "class-update-manager.php", "pre_set_site_transient_update_plugins", "install_update",
-        "Plugin_Upgrader", "Update now", "package_url",
-    ]:
-        if token not in product_scaffold:
-            fail(f"product scaffold missing executable EDD updater contract: {token}")
+    require_tokens(
+        product_scaffold,
+        [
+            "easy-digital-downloads/edd-sl-sdk", "edd_sl_sdk_registry", "class-license.php",
+            "class-update-manager.php", "pre_set_site_transient_update_plugins", "install_update",
+            "Plugin_Upgrader", "Update now", "package_url",
+        ],
+        "product scaffold executable EDD updater",
+    )
 
     maintenance = "\n".join(
         (ROOT / path).read_text(encoding="utf-8")
@@ -88,15 +98,40 @@ def main() -> int:
             "tools/maintenance_rollback.py", "tools/maintenance_system.py", "tools/maintenance_uninstall.py",
         ]
     )
-    for token in [
-        "upgrader_pre_install", "overwrite_package", "nalapps-data-backup-v1", "debug_information",
-        "delete_all", "class-data-portability.php", "class-rollback-manager.php",
-        "nalapps-switch", "nalapps-admin-ui.css", "refined_admin_ui",
-        "product_native_license_ui", "license_activation_ui", "activate_license",
-        "check_license", "deactivate_license", "Serial key",
-    ]:
-        if token not in maintenance:
-            fail(f"maintenance scaffold missing contract: {token}")
+    require_tokens(
+        maintenance,
+        [
+            "upgrader_pre_install", "overwrite_package", "nalapps-data-backup-v1", "debug_information",
+            "delete_all", "class-data-portability.php", "class-rollback-manager.php",
+            "nalapps-switch", "nalapps-admin-ui.css", "refined_admin_ui",
+            "product_native_license_ui", "license_activation_ui", "activate_license",
+            "check_license", "deactivate_license", "Serial key",
+            "list_release_versions", "release_rollback", "RELEASES_API",
+            "browser_download_url", "prerelease", "Rollback to selected version",
+            "Local safety backups",
+        ],
+        "maintenance scaffold",
+    )
+
+    rollback_doc = (ROOT / "docs/ROLLBACK-BACKUP-DATA-LIFECYCLE.md").read_text(encoding="utf-8")
+    require_tokens(
+        rollback_doc,
+        [
+            "Verified Release Version Rollback", "Release Asset", "Source code", "N → N-1",
+            "Update Center contract", "지금 업데이트", "로컬 안전 백업",
+        ],
+        "rollback lifecycle",
+    )
+
+    acceptance = (ROOT / "docs/ACCEPTANCE-CHECKLIST.md").read_text(encoding="utf-8")
+    require_tokens(
+        acceptance,
+        [
+            "N →", "실제 버전 롤백", "Update Center", "즉시 업데이트 버튼",
+            "list_release_versions", "release_rollback", "Source Code archive",
+        ],
+        "acceptance gate",
+    )
 
     release_tokens = [
         "Existing verified release is immutable",
@@ -109,66 +144,74 @@ def main() -> int:
         "needs_assets",
     ]
     release_template = (ROOT / "wordpress/edd/github-actions-release-template.yml").read_text(encoding="utf-8")
-    for token in release_tokens:
-        if token not in release_template:
-            fail(f"EDD release template missing immutable/recovery contract: {token}")
+    require_tokens(release_template, release_tokens, "EDD release template immutable/recovery")
     if "--clobber" in release_template:
         fail("EDD release template must never overwrite an existing release asset")
 
     complete_scaffold = (ROOT / "tools/scaffold_complete.py").read_text(encoding="utf-8")
-    for token in release_tokens:
-        if token not in complete_scaffold:
-            fail(f"generated product release workflow missing immutable/recovery contract: {token}")
-    for token in ["Release Source Code", "bootstrap deadlock", "N-1 to N", "package/download URL"]:
-        if token not in complete_scaffold:
-            fail(f"generated release acceptance missing commercial lifecycle contract: {token}")
+    require_tokens(complete_scaffold, release_tokens, "generated product release workflow immutable/recovery")
+    require_tokens(
+        complete_scaffold,
+        ["Release Source Code", "bootstrap deadlock", "N-1 to N", "package/download URL"],
+        "generated release acceptance commercial lifecycle",
+    )
     if "--clobber" in complete_scaffold:
         fail("generated product release workflow must never overwrite an existing release asset")
 
     edd_docs = (ROOT / "docs/EDD-LICENSE-AND-UPDATES.md").read_text(encoding="utf-8")
-    for token in [
-        "bootstrap deadlock", "Release Source Code", "N-1 → N", "missing-asset backfill",
-        "Update File", "package", "download_link",
-    ]:
-        if token not in edd_docs:
-            fail(f"EDD commercial lifecycle contract missing: {token}")
+    require_tokens(
+        edd_docs,
+        [
+            "bootstrap deadlock", "Release Source Code", "N-1 → N", "missing-asset backfill",
+            "Update File", "package", "download_link",
+        ],
+        "EDD commercial lifecycle",
+    )
 
     ui_css = (ROOT / "assets/css/nalapps-admin-ui.css").read_text(encoding="utf-8")
-    for token in ["nalapps-page-actions", "nalapps-switch", "nalapps-danger-zone", "nalapps-nav a.is-active:after"]:
-        if token not in ui_css:
-            fail(f"refined admin UI missing component: {token}")
+    require_tokens(
+        ui_css,
+        ["nalapps-page-actions", "nalapps-switch", "nalapps-danger-zone", "nalapps-nav a.is-active:after"],
+        "refined admin UI",
+    )
 
     adapter = (ROOT / "wordpress/class-nalapps-admin-ui-adapter.php").read_text(encoding="utf-8")
-    for token in ["백업/복구", "시스템 정보", "nalapps-page-actions", "updates", "maintenance"]:
-        if token not in adapter:
-            fail(f"admin UI adapter missing navigation/action contract: {token}")
+    require_tokens(adapter, ["백업/복구", "시스템 정보", "nalapps-page-actions", "updates", "maintenance"], "admin UI adapter")
 
     contract_test = (ROOT / "tools/quality_contract_test.py").read_text(encoding="utf-8")
-    for token in ["hyphenated-paid-fixture_license_key", "telemetry-without-external-api", "paid-missing-edd-metadata", "sensitive-backup-option"]:
-        if token not in contract_test:
-            fail(f"quality contract regression missing: {token}")
+    require_tokens(
+        contract_test,
+        ["hyphenated-paid-fixture_license_key", "telemetry-without-external-api", "paid-missing-edd-metadata", "sensitive-backup-option"],
+        "quality contract regression",
+    )
 
     cli = (ROOT / "tools/nalapps_plugin.py").read_text(encoding="utf-8")
-    for token in ["wordpress/plugin-check-action@v1", "dependabot.yml", "CODEOWNERS", "ISSUE_TEMPLATE", "tests/README.md", "add_maintenance_runtime"]:
-        if token not in cli:
-            fail(f"canonical CLI missing governance contract: {token}")
+    require_tokens(
+        cli,
+        ["wordpress/plugin-check-action@v1", "dependabot.yml", "CODEOWNERS", "ISSUE_TEMPLATE", "tests/README.md", "add_maintenance_runtime"],
+        "canonical CLI governance",
+    )
 
     if "@Eoingtilab" not in (ROOT / ".github/CODEOWNERS").read_text(encoding="utf-8"):
         fail("EOINGTI Lab CODEOWNERS entry is missing")
 
     quality = (ROOT / ".github/workflows/quality-gate.yml").read_text(encoding="utf-8")
-    for token in ["quality_contract_test.py", "wordpress/plugin-check-action@v1", "cache-dependency-path: requirements-dev.txt", "nalapps-paid-api"]:
-        if token not in quality:
-            fail(f"primary quality gate missing contract: {token}")
+    require_tokens(
+        quality,
+        ["quality_contract_test.py", "wordpress/plugin-check-action@v1", "cache-dependency-path: requirements-dev.txt", "nalapps-paid-api"],
+        "primary quality gate",
+    )
 
     free_plugin_check = (ROOT / ".github/workflows/plugin-check-free.yml").read_text(encoding="utf-8")
     if "nalapps-free-basic" not in free_plugin_check or "wordpress/plugin-check-action@v1" not in free_plugin_check:
         fail("isolated free-plugin official Plugin Check is missing")
 
     tag_workflow = (ROOT / ".github/workflows/tag-version.yml").read_text(encoding="utf-8")
-    for token in ["Create immutable standard tag after validation", "quality_contract_test.py", "cache-dependency-path: requirements-dev.txt", "nalapps-paid-api"]:
-        if token not in tag_workflow:
-            fail(f"standard tag workflow missing gate contract: {token}")
+    require_tokens(
+        tag_workflow,
+        ["Create immutable standard tag after validation", "quality_contract_test.py", "cache-dependency-path: requirements-dev.txt", "nalapps-paid-api"],
+        "standard tag workflow",
+    )
 
     print(f"PASS standard_audit version={version} required_files={len(REQUIRED_FILES)}")
     return 0
