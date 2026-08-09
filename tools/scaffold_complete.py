@@ -42,9 +42,12 @@ def phpcs_xml() -> str:
   <arg value="ps" />
   <exclude-pattern>*/vendor/*</exclude-pattern>
   <exclude-pattern>*/build/*</exclude-pattern>
-  <rule ref="WordPress-Core" />
-  <rule ref="WordPress-Docs" />
-  <rule ref="WordPress-Extra" />
+  <rule ref="WordPress-Core">
+    <exclude name="WordPress.WP.I18n" />
+  </rule>
+  <rule ref="WordPress-Extra">
+    <exclude name="WordPress.WP.I18n" />
+  </rule>
 </ruleset>
 '''
 
@@ -116,13 +119,23 @@ jobs:
 def release_workflow(profile: dict) -> str:
     slug = profile["slug"]
     name = profile["plugin_name"].replace('"', '')
-    return f'''name: Validate and Build Plugin Release
-
-on:
+    mode = profile.get("release_mode", "manual")
+    if mode == "auto_on_version_bump":
+        trigger = f'''on:
   push:
     branches: [main]
+    paths:
+      - '{slug}.php'
+      - 'readme.txt'
   workflow_dispatch:
+'''
+    else:
+        trigger = '''on:
+  workflow_dispatch:
+'''
+    return f'''name: Validate and Build Plugin Release
 
+{trigger}
 permissions:
   contents: write
 
@@ -154,7 +167,7 @@ jobs:
           php-version: '8.3'
           tools: composer:v2
           coverage: none
-      - name: Install and audit dependencies
+      - name: Install and audit quality dependencies
         if: steps.version.outputs.is_new == 'true'
         run: |
           composer update --no-interaction --prefer-dist --no-progress
@@ -169,6 +182,17 @@ jobs:
           version="${{{{ steps.version.outputs.version }}}}"
           grep -q "Stable tag: $version" readme.txt
           grep -q '"slug": "{slug}"' plugin-profile.json
+      - name: Prepare production dependencies
+        if: steps.version.outputs.is_new == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          runtime_count="$(php -r '$c=json_decode(file_get_contents("composer.json"), true); echo count($c["require"] ?? []);')"
+          if [ "$runtime_count" -gt 0 ]; then
+            composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction --no-progress
+          else
+            rm -rf vendor
+          fi
       - name: Build immutable distribution
         if: steps.version.outputs.is_new == 'true'
         shell: bash
@@ -179,7 +203,7 @@ jobs:
           mkdir -p build/{slug}
           rsync -a ./ build/{slug}/ \\
             --exclude '.git/' --exclude '.github/' --exclude 'build/' --exclude 'tests/' \\
-            --exclude 'vendor/' --exclude '*.zip' --exclude 'composer.lock' --exclude 'phpcs.xml.dist'
+            --exclude '*.zip' --exclude 'phpcs.xml.dist'
           test -f build/{slug}/{slug}.php
           cd build
           zip -qr "{slug}-$version.zip" {slug}
@@ -236,9 +260,23 @@ def acceptance_md(profile: dict) -> str:
     return "\n".join(lines) + "\n"
 
 
+def normalize_generated_php(target: Path) -> None:
+    replacements = {
+        "if ( ! defined( 'ABSPATH' ) ) { exit; }": "if ( ! defined( 'ABSPATH' ) ) {\n\texit;\n}",
+        "if ( version_compare( $current, self::TARGET, '>=' ) ) { return; }": "if ( version_compare( $current, self::TARGET, '>=' ) ) {\n\t\t\treturn;\n\t\t}",
+        "private function __construct() {}": "private function __construct() {\n\t}",
+    }
+    for path in target.rglob("*.php"):
+        text = path.read_text(encoding="utf-8")
+        for old, new in replacements.items():
+            text = text.replace(old, new)
+        path.write_text(text, encoding="utf-8")
+
+
 def complete_scaffold(profile_path: Path, output: Path, clean: bool = False) -> Path:
     profile = validate_profile(profile_path)
     target = scaffold(profile_path, output, clean=clean)
+    normalize_generated_php(target)
     write_file(target, "composer.json", composer_json(profile))
     write_file(target, "phpcs.xml.dist", phpcs_xml())
     write_file(target, ".github/workflows/quality.yml", quality_workflow(profile))
