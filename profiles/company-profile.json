@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0",
+  "developer_name_ko": "어잉티연구소",
+  "developer_name_en": "EOINGTI Lab",
+  "brand": "NalApps",
+  "author": "EOINGTI Lab",
+  "author_uri": "https://eoingti.com/",
+  "developer_site": "https://eoingti.com/",
+  "github_org": "Eoingtilab",
+  "github_org_url": "https://github.com/Eoingtilab",
+  "repository_template": "https://github.com/Eoingtilab/{plugin-slug}",
+  "plugin_uri_fallback": "https://eoingti.com/",
+  "public_repository_default": true,
+  "telemetry_default": "off",
+  "uninstall_data_policy_default": "preserve"
+}
