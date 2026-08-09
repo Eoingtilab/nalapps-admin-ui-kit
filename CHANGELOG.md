@@ -1,5 +1,26 @@
 # Changelog
 
+## 3.0.0
+- 저장소 정식 명칭을 `Eoingtilab/nalapps-wordpress-plugin-standard` 기준으로 통일
+- `profiles/company-profile.json` canonical EOINGTI Lab 회사 프로필 추가
+- `profiles/plugin-profile.schema.json` 및 example profile 추가
+- 제품별 profile만 입력하고 나머지 공통 표준을 자동 상속하는 개발 방식 확정
+- 최상위 `docs/MASTER-STANDARD.md` 추가
+- 성능 budget, conditional asset loading, 접근성, 관리자 UX 계약 추가
+- Privacy/Telemetry opt-in, 최소수집, diagnostics redaction 계약 추가
+- REST/AJAX permission/schema 및 file upload validation 계약 추가
+- concurrency lock, idempotency, retry/overlap 방지 계약 추가
+- Feature Flag, backup/recovery, import/export, capability matrix 계약 추가
+- namespace/prefix/conflict isolation 및 deprecated API 정책 추가
+- dependency/lock file/supply-chain/release asset 정책 추가
+- public repository safety gate와 secret/customer-data 금지 규칙 추가
+- `SECURITY.md`, `CONTRIBUTING.md` 추가
+- Plugin Header에 Domain Path, Requires Plugins, Network, GPL metadata 표준 확장
+- GitHub README 및 WordPress readme.txt 공통 템플릿 강화
+- reusable `templates/github/workflows/plugin-ci.yml` CI template 추가
+- `docs/TESTING-CI-RELEASE.md` 추가 및 version bump-last release protocol 확정
+- Acceptance Gate를 metadata/public safety/UI/accessibility/security/performance/privacy/lifecycle/DB/concurrency/supply-chain/EDD/CI 전체로 확대
+
 ## 2.3.0
 - EOINGTI Lab/어잉티연구소 canonical company profile 추가
 - 개발사 홈페이지 기본값을 `https://eoingti.com/`로 고정
