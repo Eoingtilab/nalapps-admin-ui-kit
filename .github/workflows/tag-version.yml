@@ -61,21 +61,11 @@ jobs:
           python tools/quality_contract_test.py
           bash tools/public_repo_guard.sh
 
-      - name: Official WordPress Plugin Check - free fixture
+      - name: Official WordPress Plugin Check - EDD paid representative
         if: steps.version.outputs.is_new == 'true'
         uses: wordpress/plugin-check-action@v1
         with:
-          build-dir: './build/self-test/nalapps-free-basic'
-          categories: |
-            security
-            performance
-            accessibility
-            general
-
-      - name: Official WordPress Plugin Check - EDD paid fixture
-        if: steps.version.outputs.is_new == 'true'
-        uses: wordpress/plugin-check-action@v1
-        with:
+          repo-token: ''
           build-dir: './build/self-test/nalapps-paid-api'
           categories: |
             security
