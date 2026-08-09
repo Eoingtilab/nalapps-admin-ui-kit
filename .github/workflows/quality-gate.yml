@@ -1,0 +1,84 @@
+name: NalApps Standard Quality Gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  standard-self-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install Python validation tools
+        run: pip install -r requirements-dev.txt
+
+      - name: Canonical standard audit
+        run: python tools/standard_audit.py
+
+      - name: Scaffold matrix self-test
+        run: python tools/self_test.py
+
+      - name: Public repository safety gate
+        run: bash tools/public_repo_guard.sh
+
+      - name: Set up PHP and Composer
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          tools: composer:v2
+          coverage: none
+
+      - name: Install WPCS tooling
+        run: composer update --no-interaction --prefer-dist --no-progress
+
+      - name: Dependency security audit
+        run: composer audit
+
+      - name: PHP syntax for reusable and generated code
+        shell: bash
+        run: |
+          set -euo pipefail
+          find wordpress -name '*.php' ! -name '*.template.php' -print0 | xargs -0 -r -n1 php -l
+          find build/self-test -name '*.php' -print0 | xargs -0 -r -n1 php -l
+
+      - name: WordPress Coding Standards on generated scaffold
+        run: vendor/bin/phpcs --standard=phpcs.xml.dist build/self-test
+
+      - name: Release provenance generator smoke test
+        run: python tools/release_manifest.py build/self-test/nalapps-free-basic --output build/release-provenance.json --version 0.1.0 --commit "${GITHUB_SHA}"
+
+      - name: Verify deterministic provenance shape
+        run: python -c "import json; d=json.load(open('build/release-provenance.json')); assert d['file_count'] > 0 and d['package_root'] == 'nalapps-free-basic'"
+
+  php-compatibility-matrix:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['7.4', '8.1', '8.3', '8.4', '8.5']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r requirements-dev.txt
+      - run: python tools/self_test.py
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+      - name: Lint generated PHP
+        run: find build/self-test -name '*.php' -print0 | xargs -0 -r -n1 php -l
