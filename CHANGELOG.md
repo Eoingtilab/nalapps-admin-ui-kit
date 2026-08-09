@@ -1,5 +1,28 @@
 # Changelog
 
+## 4.0.0
+- 문서형 표준을 `Plugin Profile → Scaffold → CI Enforcement → Immutable Release Gate` 자동화 체계로 승격
+- canonical `tools/scaffold_complete.py` 완성형 플러그인 generator 추가
+- `profiles/plugin-profile.schema.json`을 plugin/release/EDD metadata까지 확장하고 unknown field fail-closed 적용
+- `edd_paid` profile에서 `edd_download_id`와 `edd_store_url`을 필수화
+- 안전한 `release_mode=manual|auto_on_version_bump` 계약 추가, 신규 scaffold 기본은 manual release
+- free / EDD paid + API / full-capability synthetic plugin 3종 self-test matrix 추가
+- profile별 external HTTP, DB migration, Cron, REST, file upload, EDD config skeleton 조건부 생성
+- generated plugin에 Composer/WPCS 설정, GitHub quality workflow, immutable release workflow, release acceptance checklist 자동 생성
+- 표준 저장소에 실제 WordPress Coding Standards / PHPCS CI enforcement 추가
+- PHP 7.4 / 8.1 / 8.3 / 8.4 / 8.5 syntax matrix 추가
+- Composer dependency audit 자동화 추가
+- public repository secret/credential/backup/customer-data guard script 추가
+- release package file SHA-256 provenance manifest generator 추가
+- standard canonical file/cross-reference drift를 차단하는 `tools/standard_audit.py` 추가
+- 표준 VERSION 태그도 self-test/security/dependency/PHP/WPCS 검증 이후에만 생성하도록 강화
+- 기존 VERSION/tag는 immutable 처리하고 tag 이동/재생성 금지
+- generated product release도 기존 tag/release overwrite 금지, ZIP root 및 SHA-256 checksum 검증 후 신규 release 생성
+- production Composer dependency가 있으면 release 전 `--no-dev` install 후 `vendor/` 포함 가능하도록 build 계약 강화
+- 자동 검증과 Human Final Gate를 분리한 v4 Acceptance Gate 확정
+- `docs/AUTOMATION-AND-SCAFFOLDING.md` 추가
+- free/EDD paid canonical example profile 추가
+
 ## 3.0.0
 - 저장소 정식 명칭을 `Eoingtilab/nalapps-wordpress-plugin-standard` 기준으로 통일
 - `profiles/company-profile.json` canonical EOINGTI Lab 회사 프로필 추가
