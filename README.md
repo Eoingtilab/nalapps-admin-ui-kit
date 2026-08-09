@@ -1,6 +1,6 @@
-# NalApps WordPress Plugin Standard v4.4
+# NalApps WordPress Plugin Standard v4.5
 
-EOINGTI Lab / 어잉티연구소의 WordPress 플러그인 공통 개발·배포 표준입니다. v4.4는 **Plugin Profile → Product Scaffold → Runtime Safety → Commercial License/Update Lifecycle → CI Enforcement → Immutable/Recoverable Release Gate**까지 자동화합니다.
+EOINGTI Lab / 어잉티연구소의 WordPress 플러그인 공통 개발·배포 표준입니다. v4.5는 **Plugin Profile → Product Scaffold → Runtime Safety → Commercial License/Update Lifecycle → Maintenance Center → Verified Version Rollback → CI Enforcement → Immutable/Recoverable Release Gate**까지 자동화합니다.
 
 ## Canonical Company Profile
 
@@ -20,7 +20,7 @@ Machine-readable source: `profiles/company-profile.json`
 
 ## 한 줄 적용 지시
 
-> `Eoingtilab/nalapps-wordpress-plugin-standard`의 최신 안정 태그 기준으로 전체 표준을 적용한다. 제품별 `plugin-profile.json`을 정의하고 회사 메타데이터, Admin UI, 보안, 성능, 접근성, 개인정보, REST/AJAX, 파일 업로드, DB migration, Cron, 동시실행 방지, logging, System Status, rollback, data backup/import/export, safe uninstall, system information, lifecycle, EDD 라이선스/업데이트, WPCS, CI, 테스트, immutable/recoverable release 및 public-repository safety gate를 표준에 따라 적용한다. 실제 존재하지 않는 URL이나 기능은 만들지 않는다.
+> `Eoingtilab/nalapps-wordpress-plugin-standard`의 최신 안정 태그 기준으로 전체 표준을 적용한다. 제품별 `plugin-profile.json`을 정의하고 회사 메타데이터, Admin UI, 보안, 성능, 접근성, 개인정보, REST/AJAX, 파일 업로드, DB migration, Cron, 동시실행 방지, logging, System Status, Update Center, Maintenance Center, verified Release Asset version rollback, data backup/import/export, safe uninstall, system information, lifecycle, EDD 라이선스/업데이트, WPCS, CI, 테스트, immutable/recoverable release 및 public-repository safety gate를 표준에 따라 적용한다. 실제 존재하지 않는 URL이나 기능은 만들지 않는다.
 
 ## 완성형 Product Scaffold
 
@@ -33,9 +33,9 @@ python tools/nalapps_plugin.py create \
   --clean
 ```
 
-생성 결과에는 main plugin, 고유 namespace/prefix, System Status, Maintenance, `plugin-profile.json`, `nalapps-standard-manifest.json`, README/readme/SECURITY/CONTRIBUTING, Composer/WPCS 설정, GitHub quality workflow, immutable release workflow, release acceptance checklist가 포함됩니다.
+생성 결과에는 main plugin, 고유 namespace/prefix, System Status, Maintenance Center, `plugin-profile.json`, `nalapps-standard-manifest.json`, README/readme/SECURITY/CONTRIBUTING, Composer/WPCS 설정, GitHub quality workflow, immutable release workflow, release acceptance checklist가 포함됩니다.
 
-Profile 플래그에 따라 DB migration, Cron, REST, external HTTP, file upload가 조건부 선택됩니다. `edd_paid` 제품은 EDD Software Licensing SDK runtime dependency, **제품 자체 시리얼 입력/활성화/확인/비활성화 UI**, WordPress 기본 updater, 내부 Updates 화면 및 production `vendor/` Release Asset contract까지 자동 생성됩니다.
+Profile 플래그에 따라 DB migration, Cron, REST, external HTTP, file upload가 조건부 선택됩니다. `edd_paid` 제품은 EDD Software Licensing SDK runtime dependency, **제품 자체 시리얼 입력/활성화/확인/비활성화 UI**, WordPress 기본 updater, 내부 Update Center 및 production `vendor/` Release Asset contract까지 자동 생성됩니다.
 
 ## Plugin Profile
 
@@ -60,15 +60,31 @@ Capability + nonce, validation/sanitization/escaping, SQL 안전성, namespace/p
 
 - 자기 플러그인 업데이트 직전 코드 ZIP 자동 백업
 - 백업 실패 시 업데이트 fail-closed
-- 최근 코드 백업 3개 유지 및 관리자 수동 롤백
+- 최근 로컬 코드 백업 3개 유지 및 비상 복구
 - 롤백 직전 현재 코드/데이터 재백업
-- portable JSON 데이터 내보내기/가져오기
+- portable JSON 데이터 백업/복원
 - import 직전 data snapshot
 - uninstall 기본 `preserve`
 - 명시적 `delete_all`에서만 선언된 데이터 삭제
 - Maintenance/System Status secret redaction
+- **검증된 이전 GitHub Release Asset을 버전 선택형으로 롤백**
+- draft/prerelease/current-or-newer version은 롤백 후보 제외
+- `<plugin-slug>-X.Y.Z.zip` 정식 Asset만 허용하고 GitHub Source Code archive는 금지
+- N → N-1 실제 롤백 E2E를 Human Final Gate에 포함
 
 세부 계약은 `docs/ROLLBACK-BACKUP-DATA-LIFECYCLE.md`를 따릅니다.
+
+### Update Center
+
+상용 플러그인의 내부 Update Center는 단순 상태 조회 화면이 아닙니다.
+
+- 현재 버전 / 최신 버전 표시
+- 업데이트 확인
+- 새 버전 + 유효 라이선스 + 실제 package/download URL이 충족되면 **내부 화면에서 즉시 업데이트**
+- 업데이트 전 자동 code backup + data snapshot
+- 라이선스/패키지/서버 오류 분리 표시
+- 최신 버전 상태 명확히 표시
+- 실패 후 Maintenance Center에서 로컬 복구 또는 검증된 이전 Release 롤백 가능
 
 ### Engineering
 성능 budget, conditional asset loading, accessibility, privacy, telemetry opt-in, REST/AJAX, file upload validation, concurrency/idempotency, feature flags, backup/recovery, import/export, capability matrix, deprecated API, dependency/supply-chain, graceful failure를 적용합니다.
@@ -80,7 +96,7 @@ Capability + nonce, validation/sanitization/escaping, SQL 안전성, namespace/p
 - EDD Software Licensing SDK
 - 제품 자체 License UI — SDK 화면이 사라져도 시리얼 입력 가능
 - WordPress Plugins 화면 업데이트
-- 플러그인 내부 Updates 화면
+- 플러그인 내부 Update Center
 - `package` 우선 / `download_link` fallback
 - 라이선스와 기존 핵심 기능의 기본 분리
 - 신뢰된 CI가 만든 실제 Release Asset ZIP
@@ -89,6 +105,7 @@ Capability + nonce, validation/sanitization/escaping, SQL 안전성, namespace/p
 - tag/release/asset immutable
 - tag/Release만 있고 Asset이 빠진 경우 누락 Asset만 backfill
 - N-1 → N 실제 WordPress 업데이트 E2E
+- N → N-1 verified Release Asset rollback E2E
 - EDD Version/Update File/Release Asset 연결 확인
 
 `new_version`이 보이는 것만으로 업데이트 PASS로 판단하지 않습니다. 상세 계약은 `docs/EDD-LICENSE-AND-UPDATES.md`를 따릅니다.
@@ -99,7 +116,7 @@ EDD/API/GitHub/WordPress/SSH/DB 자격증명, 실제 `.env`, 고객 DB/백업/�
 ### Testing / CI / Release
 `.github/workflows/quality-gate.yml`은 canonical standard audit, profile/schema, free/EDD paid scaffold, maintenance lifecycle, EDD license/updater, public safety, dependency audit, PHP syntax, WPCS, PHP matrix, WordPress Plugin Check, provenance/hash를 검증합니다.
 
-`tools/standard_audit.py`는 상용 release template에 다음 계약이 유지되는지도 fail-closed로 확인합니다.
+`tools/standard_audit.py`는 상용 release/maintenance template에 다음 계약이 유지되는지도 fail-closed로 확인합니다.
 
 - 기존 verified asset overwrite 금지
 - `--clobber` 금지
@@ -108,6 +125,10 @@ EDD/API/GitHub/WordPress/SSH/DB 자격증명, 실제 `.env`, 고객 DB/백업/�
 - ZIP root 검사
 - SHA-256 생성
 - missing Release Asset backfill
+- Maintenance Center의 `list_release_versions` / `release_rollback`
+- 정확한 Release Asset filename 검증
+- Source Code archive 롤백 금지
+- Update Center 즉시 업데이트 계약
 
 실제 제품의 UI/EDD/live API/data round-trip/upgrade/rollback은 `docs/ACCEPTANCE-CHECKLIST.md`의 Human Final Gate에서 검증합니다.
 
@@ -147,7 +168,7 @@ VERSION                 안정 표준 버전
 
 ## Version Policy
 
-- `4.x`: 자동 생성 + 자동 검증 + 공통 maintenance runtime + EDD paid runtime + immutable/recoverable release
+- `4.5.x`: Product Scaffold + Update Center + Maintenance Center + verified version rollback + immutable/recoverable release
 - 파괴적 계약 변경: major
 - 새 공통 모듈/자동화 계약: minor
 - 문서/CSS/호환성 수정: patch
