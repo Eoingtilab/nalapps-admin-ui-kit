@@ -1,5 +1,15 @@
 # Changelog
 
+## 4.3.0
+- EDD 유료형 생성 플러그인에 SDK 화면 유무와 관계없이 항상 접근 가능한 제품 자체 License 관리 화면 추가
+- 시리얼키 입력, 저장/활성화, 라이선스 재확인, 사이트 비활성화를 공통 runtime으로 생성
+- EDD Software Licensing `activate_license`, `check_license`, `deactivate_license` 호출을 capability + nonce + bounded HTTP 검증으로 통합
+- 라이선스 키는 시스템 정보와 portable data export에서 제외하는 비밀정보 계약 유지
+- `product_native_license_ui` required module과 `license_activation_ui` release gate 추가
+- self-test와 standard audit에서 시리얼 입력 UI, activate/check/deactivate actions, License runtime wiring을 회귀 검증
+- 기존 공식 EDD SDK registry와 WordPress/내부 updater는 유지하며 SDK가 관리자 입력 UI의 단일 실패지점이 되지 않도록 분리
+- PHP 7.4/8.1/8.3/8.4/8.5, WordPress Plugin Check, WPCS, dependency/security 및 기존 maintenance/update 회귀 게이트 통과 후 릴리스
+
 ## 4.2.0
 - 슬라이드팝업 UI 파일럿에서 검증한 상용형 관리자 디자인을 공통 NalApps Admin UI로 승격
 - 과도한 카드/그라데이션 대신 화이트 작업면, 얇은 경계, 절제된 그림자, 블루 포인트, active underline navigation 적용
