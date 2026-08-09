@@ -1,4 +1,4 @@
-# NalApps WordPress Plugin Standard v4.4 Acceptance Gate
+# NalApps WordPress Plugin Standard v4.5 Acceptance Gate
 
 모든 해당 항목이 PASS여야 release 완료로 판단합니다. 제품 profile에서 사용하지 않는 기능만 N/A 처리할 수 있습니다.
 
@@ -20,6 +20,9 @@
 - [ ] existing tag recovery build는 반드시 해당 tag source로 pin한다.
 - [ ] 새 tag는 package build/validation 성공 이후에만 생성한다.
 - [ ] 표준 VERSION tag는 모든 automated gate 통과 후에만 생성된다.
+- [ ] Maintenance scaffold가 `list_release_versions`, `release_rollback`, 정확한 Release Asset filename 검증을 포함한다.
+- [ ] 현재 버전보다 같거나 높은 버전은 rollback 후보에서 제외한다.
+- [ ] GitHub Source Code archive를 rollback package로 사용하지 않는다.
 
 ## Company / Metadata
 - [ ] Author=`EOINGTI Lab`, Author URI=`https://eoingti.com/` 기본값이 유지된다.
@@ -42,6 +45,8 @@
 - [ ] destructive action은 확인 단계가 있고 mutation 보안 검사를 통과한다.
 - [ ] 긴 작업은 진행 상태와 중복 제출 방지가 있다.
 - [ ] 1440/1024/mobile 관리자 레이아웃 회귀가 없다.
+- [ ] Maintenance Center는 `데이터 백업/복원`, `버전 롤백`, `로컬 안전 백업`, `제거 정책`을 구분해서 보여준다.
+- [ ] Update Center는 현재/최신 버전, 업데이트 확인, 즉시 업데이트 CTA, 오류 원인을 한 화면에서 보여준다.
 
 ## Security
 - [ ] 모든 mutation은 최소 capability + nonce를 함께 검사한다.
@@ -49,6 +54,7 @@
 - [ ] 출력은 context별 escape한다.
 - [ ] SQL은 안전한 WP API 또는 `$wpdb->prepare()`를 사용한다.
 - [ ] REST/AJAX/file upload는 해당 permission/nonce/schema/MIME/size 검증을 수행한다.
+- [ ] Release rollback은 사용자가 전달한 URL을 신뢰하지 않고 서버가 검증한 버전→Asset 매핑만 사용한다.
 
 ## Performance / Privacy / Diagnostics
 - [ ] 필요한 화면/페이지에서만 assets와 remote calls를 실행한다.
@@ -68,6 +74,7 @@
 - [ ] migration은 deterministic, forward-only, idempotent다.
 - [ ] migration/import 전 recovery/backup plan이 있다.
 - [ ] secret은 기본 export하지 않는다.
+- [ ] 코드 롤백이 DB migration 역행을 자동 가정하지 않는다.
 
 ## Cron / Concurrency / External HTTP
 - [ ] cron 중복 예약이 없고 비활성화 시 제품 소유 hook만 해제한다.
@@ -91,7 +98,7 @@
 - [ ] 라이선스가 필요한 package download를 우회하지 않는다.
 - [ ] 라이선스 서버 장애와 invalid/revoked 상태를 구분한다.
 - [ ] WordPress Plugins 화면에서 새 버전 알림과 실제 업데이트가 가능하다.
-- [ ] 플러그인 내부에서도 같은 최신 버전/라이선스/업데이트 상태를 확인하고 실행할 수 있다.
+- [ ] 플러그인 내부 Update Center에서도 새 버전이 있으면 **즉시 업데이트 버튼**으로 설치를 실행할 수 있다.
 
 ## Human Final Gate — 자동화로 대체하지 않음
 - [ ] 제품 요구사항과 실제 기능이 일치한다.
@@ -101,9 +108,12 @@
 - [ ] package URL 다운로드 → ZIP 설치 → 활성 상태 → 신규 버전 확인까지 전부 성공했다.
 - [ ] 업데이트 후 기존 사용자 데이터/설정/콘텐츠가 유지된다.
 - [ ] 업데이트 후 핵심 프런트/관리 기능이 정상이다.
+- [ ] 신규 N → 검증된 N-1 Release Asset **실제 버전 롤백**을 최소 1회 검증했다.
+- [ ] 롤백 직전 자동 코드 backup + data snapshot이 생성되고 실패 시 롤백이 중단된다.
+- [ ] 로컬 안전 백업 복구도 별도로 최소 1회 검증했다.
 - [ ] EDD 유료 제품은 실제 라이선스 activate/check/deactivate/re-activate를 검증했다.
 - [ ] 기존 구버전 구조적 결함으로 자동 업데이트가 불가능하면 안전한 1회 수동 덮어설치 migration 경로를 문서화하고, 그 다음 버전부터 자동 업데이트 가능함을 검증했다.
 - [ ] 외부 서비스 약관/개인정보 고지/수집 필드가 실제 구현과 일치한다.
 - [ ] 모든 변경 완료 후 마지막에 version bump를 수행했다.
 
-참조: `docs/MASTER-STANDARD.md`, `docs/ENGINEERING-CONTRACTS-V3.md`, `docs/AUTOMATION-AND-SCAFFOLDING.md`, `docs/PUBLIC-REPOSITORY-SAFETY.md`, `docs/EDD-LICENSE-AND-UPDATES.md`.
+참조: `docs/MASTER-STANDARD.md`, `docs/ENGINEERING-CONTRACTS-V3.md`, `docs/AUTOMATION-AND-SCAFFOLDING.md`, `docs/PUBLIC-REPOSITORY-SAFETY.md`, `docs/EDD-LICENSE-AND-UPDATES.md`, `docs/ROLLBACK-BACKUP-DATA-LIFECYCLE.md`.
