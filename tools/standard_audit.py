@@ -19,13 +19,18 @@ REQUIRED_FILES = [
     "docs/MASTER-STANDARD.md",
     "docs/WORDPRESS-PLUGIN-STANDARD.md",
     "docs/ENGINEERING-CONTRACTS-V3.md",
+    "docs/AUTOMATION-AND-SCAFFOLDING.md",
     "docs/PUBLIC-REPOSITORY-SAFETY.md",
     "docs/EDD-LICENSE-AND-UPDATES.md",
     "docs/ACCEPTANCE-CHECKLIST.md",
     "tools/validate_profile.py",
     "tools/scaffold_plugin.py",
+    "tools/scaffold_complete.py",
     "tools/self_test.py",
+    "tools/standard_audit.py",
     "tools/public_repo_guard.sh",
+    "tools/release_manifest.py",
+    "requirements-dev.txt",
     "composer.json",
     "phpcs.xml.dist",
     ".github/workflows/quality-gate.yml",
@@ -66,6 +71,7 @@ def main() -> int:
         "Plugin Profile",
         "Public Repository Safety",
         "Testing / CI / Release",
+        "scaffold_complete.py",
     ]:
         if token not in readme:
             fail(f"README missing canonical token: {token}")
@@ -73,6 +79,9 @@ def main() -> int:
     schema = json.loads((ROOT / "profiles/plugin-profile.schema.json").read_text(encoding="utf-8"))
     if schema.get("additionalProperties") is not False:
         fail("plugin profile schema must fail closed on unknown fields")
+
+    if not any(item.get("if", {}).get("properties", {}).get("product_type", {}).get("const") == "edd_paid" for item in schema.get("allOf", [])):
+        fail("plugin profile schema must require EDD fields for paid products")
 
     print(f"PASS standard_audit version={version} required_files={len(REQUIRED_FILES)}")
     return 0
