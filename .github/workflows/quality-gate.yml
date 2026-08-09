@@ -28,11 +28,20 @@ jobs:
       - name: Canonical standard audit
         run: python tools/standard_audit.py
 
-      - name: Scaffold matrix self-test
+      - name: Product scaffold matrix self-test
         run: python tools/self_test.py
 
       - name: Public repository safety gate
         run: bash tools/public_repo_guard.sh
+
+      - name: Official WordPress Plugin Check on generated free scaffold
+        uses: wordpress/plugin-check-action@v1
+        with:
+          build-dir: './build/self-test/nalapps-free-basic'
+          categories: |
+            security
+            performance
+            accessibility
 
       - name: Set up PHP and Composer
         uses: shivammathur/setup-php@v2
