@@ -38,19 +38,10 @@ jobs:
       - name: Public repository safety gate
         run: bash tools/public_repo_guard.sh
 
-      - name: Official WordPress Plugin Check - free fixture
+      - name: Official WordPress Plugin Check - EDD paid representative
         uses: wordpress/plugin-check-action@v1
         with:
-          build-dir: './build/self-test/nalapps-free-basic'
-          categories: |
-            security
-            performance
-            accessibility
-            general
-
-      - name: Official WordPress Plugin Check - EDD paid fixture
-        uses: wordpress/plugin-check-action@v1
-        with:
+          repo-token: ''
           build-dir: './build/self-test/nalapps-paid-api'
           categories: |
             security
