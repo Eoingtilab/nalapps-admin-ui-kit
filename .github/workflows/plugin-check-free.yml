@@ -1,0 +1,32 @@
+name: NalApps Free Scaffold Plugin Check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  free-plugin-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r requirements-dev.txt
+      - name: Generate representative free plugin
+        run: python tools/self_test.py
+      - name: Official WordPress Plugin Check - free representative
+        uses: wordpress/plugin-check-action@v1
+        with:
+          repo-token: ''
+          build-dir: './build/self-test/nalapps-free-basic'
+          categories: |
+            security
+            performance
+            accessibility
+            general
