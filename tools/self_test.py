@@ -6,8 +6,8 @@ import json
 import shutil
 from pathlib import Path
 
-from scaffold_complete import complete_scaffold
 from scaffold_plugin import ROOT
+from scaffold_product import EDD_SDK_PACKAGE, EDD_SDK_VERSION, product_scaffold
 
 BUILD = ROOT / "build" / "self-test"
 PROFILES = ROOT / "build" / "self-test-profiles"
@@ -27,6 +27,7 @@ CASES = {
         "file_upload": False,
         "multisite": False,
         "telemetry": "off",
+        "release_mode": "manual",
         "requires_plugins": [],
     },
     "paid-api": {
@@ -43,6 +44,7 @@ CASES = {
         "file_upload": False,
         "multisite": False,
         "telemetry": "off",
+        "release_mode": "manual",
         "edd_download_id": 999999,
         "edd_store_url": "https://example.com/",
         "update_uri": "https://example.com/",
@@ -62,13 +64,19 @@ CASES = {
         "file_upload": True,
         "multisite": True,
         "telemetry": "off",
+        "release_mode": "manual",
         "requires_plugins": [],
     },
 }
 
 EXPECTED = {
     "free-basic": [],
-    "paid-api": ["includes/class-http-client.php", "includes/class-edd-config.php"],
+    "paid-api": [
+        "includes/class-http-client.php",
+        "includes/class-edd-config.php",
+        "includes/class-license.php",
+        "includes/class-update-manager.php",
+    ],
     "full-capability": [
         "includes/class-http-client.php",
         "includes/class-db-migrator.php",
@@ -98,10 +106,12 @@ def main() -> int:
     for name, profile in CASES.items():
         profile_path = PROFILES / f"{name}.json"
         profile_path.write_text(json.dumps(profile, indent=2) + "\n", encoding="utf-8")
-        target = complete_scaffold(profile_path, BUILD, clean=True)
+        target = product_scaffold(profile_path, BUILD, clean=True)
 
         required = [
             target / f"{profile['slug']}.php",
+            target / "includes/class-plugin.php",
+            target / "includes/class-system-status.php",
             target / "plugin-profile.json",
             target / "nalapps-standard-manifest.json",
             target / "README.md",
@@ -125,8 +135,19 @@ def main() -> int:
             raise AssertionError(f"Standard version mismatch for {name}")
         if profile["product_type"] == "free" and "edd_license" in manifest["required_modules"]:
             raise AssertionError("Free profile incorrectly selected EDD module")
-        if profile["product_type"] == "edd_paid" and "hybrid_updater" not in manifest["required_modules"]:
-            raise AssertionError("Paid profile did not select hybrid updater")
+        if profile["product_type"] == "edd_paid":
+            if "hybrid_updater" not in manifest["required_modules"]:
+                raise AssertionError("Paid profile did not select hybrid updater")
+            composer = json.loads((target / "composer.json").read_text(encoding="utf-8"))
+            if composer.get("require", {}).get(EDD_SDK_PACKAGE) != EDD_SDK_VERSION:
+                raise AssertionError("Paid scaffold did not include the EDD SDK runtime dependency")
+            main_text = (target / f"{profile['slug']}.php").read_text(encoding="utf-8")
+            if "edd_sl_sdk_registry" not in main_text or "Update_Manager" not in main_text:
+                raise AssertionError("Paid scaffold did not wire the EDD SDK and updater")
+
+        release_workflow = (target / ".github/workflows/release.yml").read_text(encoding="utf-8")
+        if profile.get("release_mode", "manual") == "manual" and "workflow_dispatch" not in release_workflow:
+            raise AssertionError("Manual release mode lost workflow_dispatch")
         assert_no_placeholders(target)
 
     print(f"PASS self_test cases={len(CASES)} standard={standard_version}")
