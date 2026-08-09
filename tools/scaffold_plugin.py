@@ -168,6 +168,7 @@ final class Plugin {{
 \t\t$links[] = '<a href="' . esc_url( admin_url( 'options-general.php?page={slug}-system-status' ) ) . '">System Status</a>';
 \t\treturn $links;
 \t}}{cron_method}
+
 }}
 '''
 
@@ -209,11 +210,11 @@ final class System_Status {{
 \t\t\twp_die( esc_html( 'Insufficient permissions.' ) );
 \t\t}}
 \t\t$rows = array(
-\t\t\t'Plugin version' => {prefix}_VERSION,
+\t\t\t'Plugin version'   => {prefix}_VERSION,
 \t\t\t'Standard version' => {prefix}_STANDARD_VERSION,
-\t\t\t'WordPress' => get_bloginfo( 'version' ),
-\t\t\t'PHP' => PHP_VERSION,
-\t\t\t'HTTPS' => is_ssl() ? 'yes' : 'no',
+\t\t\t'WordPress'        => get_bloginfo( 'version' ),
+\t\t\t'PHP'              => PHP_VERSION,
+\t\t\t'HTTPS'            => is_ssl() ? 'yes' : 'no',
 \t\t);
 \t\techo '<div class="wrap"><h1>' . esc_html( '{profile["plugin_name"]} System Status' ) . '</h1><table class="widefat striped"><tbody>';
 \t\tforeach ( $rows as $label => $value ) {{
@@ -246,8 +247,8 @@ final class Http_Client {{
 \t\t\treturn new \\WP_Error( 'nalapps_invalid_remote_url', 'A valid HTTPS endpoint is required.' );
 \t\t}}
 \t\t$defaults = array(
-\t\t\t'timeout' => 15,
-\t\t\t'sslverify' => true,
+\t\t\t'timeout'     => 15,
+\t\t\t'sslverify'   => true,
 \t\t\t'redirection' => 3,
 \t\t);
 \t\treturn wp_remote_request( $url, wp_parse_args( $args, $defaults ) );
@@ -308,7 +309,7 @@ final class Cron_Manager {{
 
 \tpublic static function schedule() {{
 \t\tif ( ! wp_next_scheduled( self::HOOK ) ) {{
-\t\t\t$start = (int) current_time( 'timestamp', true ) + HOUR_IN_SECONDS;
+\t\t\t$start = time() + HOUR_IN_SECONDS;
 \t\t\twp_schedule_event( $start, 'daily', self::HOOK );
 \t\t}}
 \t}}
@@ -342,8 +343,8 @@ final class Rest_Controller {{
 \t\t\t'{slug}/v1',
 \t\t\t'/status',
 \t\t\tarray(
-\t\t\t\t'methods' => \\WP_REST_Server::READABLE,
-\t\t\t\t'callback' => array( __CLASS__, 'status' ),
+\t\t\t\t'methods'             => \\WP_REST_Server::READABLE,
+\t\t\t\t'callback'            => array( __CLASS__, 'status' ),
 \t\t\t\t'permission_callback' => static function () {{
 \t\t\t\t\treturn current_user_can( 'manage_options' );
 \t\t\t\t}},
@@ -406,7 +407,7 @@ if ( ! defined( 'ABSPATH' ) ) {{
 }}
 
 final class EDD_Config {{
-\tconst STORE_URL = '{store}';
+\tconst STORE_URL   = '{store}';
 \tconst DOWNLOAD_ID = {item};
 
 \tprivate function __construct() {{
