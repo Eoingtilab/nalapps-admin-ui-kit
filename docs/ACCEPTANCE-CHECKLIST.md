@@ -1,4 +1,4 @@
-# NalApps WordPress Plugin Standard v4.5 Acceptance Gate
+# NalApps WordPress Plugin Standard v4.5.2 Acceptance Gate
 
 모든 해당 항목이 PASS여야 release 완료로 판단합니다. 제품 profile에서 사용하지 않는 기능만 N/A 처리할 수 있습니다.
 
@@ -23,6 +23,7 @@
 - [ ] Maintenance scaffold가 `list_release_versions`, `release_rollback`, 정확한 Release Asset filename 검증을 포함한다.
 - [ ] 현재 버전보다 같거나 높은 버전은 rollback 후보에서 제외한다.
 - [ ] GitHub Source Code archive를 rollback package로 사용하지 않는다.
+- [ ] generated update/rollback runtime이 업데이트 직전 활성 상태를 기록하고, 업데이트 완료 후 원래 활성 상태를 보존하는 계약을 포함한다.
 
 ## Company / Metadata
 - [ ] Author=`EOINGTI Lab`, Author URI=`https://eoingti.com/` 기본값이 유지된다.
@@ -39,7 +40,9 @@
 - [ ] release ZIP도 별도 secret/customer-data scan을 통과한다.
 
 ## Admin UI / Accessibility / UX
-- [ ] NalApps 디자인 토큰과 화면 범위 CSS/JS 격리를 지킨다.
+- [ ] NalApps **Blue / Navy / Soft Blue / Neutral Gray** canonical 디자인 토큰과 화면 범위 CSS/JS 격리를 지킨다.
+- [ ] 제품별 관리자 CSS가 과거 브랜드색·임의 gradient·별도 design system으로 공통 UI를 덮어쓰지 않는다.
+- [ ] 공통 Update Center / Maintenance Center / License / System Status 화면의 헤더, panel, button, input, notice, spacing 체계가 canonical UI와 일치한다.
 - [ ] 플러그인 외 관리자/프런트 화면에 style/script가 불필요하게 로드되지 않는다.
 - [ ] 키보드, visible focus, label, semantic control, contrast가 적절하다.
 - [ ] destructive action은 확인 단계가 있고 mutation 보안 검사를 통과한다.
@@ -47,6 +50,7 @@
 - [ ] 1440/1024/mobile 관리자 레이아웃 회귀가 없다.
 - [ ] Maintenance Center는 `데이터 백업/복원`, `버전 롤백`, `로컬 안전 백업`, `제거 정책`을 구분해서 보여준다.
 - [ ] Update Center는 현재/최신 버전, 업데이트 확인, 즉시 업데이트 CTA, 오류 원인을 한 화면에서 보여준다.
+- [ ] 관리 UI 열람 capability와 실제 update/rollback mutation capability를 분리한다. 화면 열람은 제품 관리 capability, 위험 작업은 `update_plugins` 같은 최소 실행 capability를 별도로 검사한다.
 
 ## Security
 - [ ] 모든 mutation은 최소 capability + nonce를 함께 검사한다.
@@ -66,6 +70,9 @@
 - [ ] canonical slug/folder/namespace/function/option/transient/cron/REST prefix가 일관된다.
 - [ ] Plugin Header와 runtime 최소 WordPress/PHP 버전이 일치한다.
 - [ ] 활성화/비활성화/재활성화가 fatal 없이 동작한다.
+- [ ] **활성 상태의 N-1을 N으로 업데이트한 뒤 plugin basename과 활성 상태가 동일하게 유지된다.**
+- [ ] **활성 상태의 N을 N-1으로 롤백한 뒤에도 활성 상태가 유지된다.**
+- [ ] 업데이트/롤백 전에 비활성이었던 플러그인을 임의로 활성화하지 않는다.
 - [ ] 비활성화는 사용자 콘텐츠/설정을 삭제하지 않는다.
 - [ ] uninstall 기본값은 `preserve`이며 삭제는 명시적 opt-in이다.
 
@@ -104,11 +111,13 @@
 - [ ] 제품 요구사항과 실제 기능이 일치한다.
 - [ ] 실제 WordPress 관리자/프런트 E2E가 통과한다.
 - [ ] 실제 지원 브라우저/반응형 화면에서 UI가 정상이다.
+- [ ] 관리자 핵심 화면을 canonical NalApps UI 기준 스크린샷과 육안 비교하여 **UI drift가 없음**을 확인한다.
 - [ ] 직전 판매 버전 N-1 → 신규 N **실제 업데이트 설치**를 최소 1회 검증했다.
-- [ ] package URL 다운로드 → ZIP 설치 → 활성 상태 → 신규 버전 확인까지 전부 성공했다.
+- [ ] package URL 다운로드 → ZIP 설치 → **업데이트 전 활성 상태 → 업데이트 후 동일 활성 상태** → 신규 버전 확인까지 전부 성공했다.
 - [ ] 업데이트 후 기존 사용자 데이터/설정/콘텐츠가 유지된다.
 - [ ] 업데이트 후 핵심 프런트/관리 기능이 정상이다.
 - [ ] 신규 N → 검증된 N-1 Release Asset **실제 버전 롤백**을 최소 1회 검증했다.
+- [ ] 롤백 후에도 롤백 직전 활성 상태가 보존된다.
 - [ ] 롤백 직전 자동 코드 backup + data snapshot이 생성되고 실패 시 롤백이 중단된다.
 - [ ] 로컬 안전 백업 복구도 별도로 최소 1회 검증했다.
 - [ ] EDD 유료 제품은 실제 라이선스 activate/check/deactivate/re-activate를 검증했다.
