@@ -1,9 +1,22 @@
-# NalApps WordPress Plugin Standard v3 Acceptance Gate
+# NalApps WordPress Plugin Standard v4 Acceptance Gate
 
 모든 해당 항목이 PASS여야 release 완료로 판단합니다. 제품 profile에서 사용하지 않는 기능만 N/A 처리할 수 있습니다.
 
+## Automated Gate — CI가 직접 판정
+- [ ] `plugin-profile.json`이 canonical JSON Schema를 통과한다.
+- [ ] 표준 저장소 self-test가 free / EDD paid / full-capability synthetic profile을 모두 생성한다.
+- [ ] scaffold 필수 파일과 profile별 조건부 모듈 선택이 일치한다.
+- [ ] PHP syntax가 지원 PHP matrix에서 통과한다.
+- [ ] WordPress Coding Standards / PHPCS gate가 통과한다.
+- [ ] Composer dependency audit가 통과한다.
+- [ ] public repository secret/credential/backup/customer-data safety gate가 통과한다.
+- [ ] package root와 canonical slug가 일치한다.
+- [ ] Version / Stable tag / profile metadata의 기계 검증 가능한 값이 일치한다.
+- [ ] release provenance/hash 생성기가 정상 동작한다.
+- [ ] 이미 존재하는 tag/release를 덮어쓰거나 이동하지 않는다.
+- [ ] 표준 VERSION tag는 모든 automated gate 통과 후에만 생성된다.
+
 ## Company / Metadata
-- [ ] `plugin-profile.json`이 schema에 맞고 실제 제품 특성과 일치한다.
 - [ ] Author=`EOINGTI Lab`, Author URI=`https://eoingti.com/` 기본값이 유지된다.
 - [ ] GitHub owner=`Eoingtilab`, repository=`Eoingtilab/<plugin-slug>` 규칙을 따른다.
 - [ ] Plugin URI는 실제 제품 페이지 또는 `https://eoingti.com/`이며 가짜 URL이 없다.
@@ -78,9 +91,10 @@
 - [ ] experimental 기능은 기본 OFF이고 security/license gate를 우회하지 않는다.
 - [ ] 제거되는 공개/내부 계약은 가능한 범위에서 deprecation path를 둔다.
 - [ ] production dependencies와 버전 제한이 선언되어 있다.
-- [ ] build가 lock file을 사용하면 lock file을 추적한다.
+- [ ] production dependency가 있으면 lock/재현 가능한 build 정책을 제품별로 명시한다.
 - [ ] dev dependency는 runtime 필요가 없으면 배포 ZIP에서 제외한다.
 - [ ] release asset은 신뢰된 CI에서 생성한다.
+- [ ] release ZIP checksum 또는 provenance를 남긴다.
 
 ## EDD License & Hybrid Updates (유료 제품)
 - [ ] Store URL, Download ID, slug/folder, plugin file이 정확하다.
@@ -90,16 +104,15 @@
 - [ ] 라이선스가 필요한 package download를 우회하지 않는다.
 - [ ] 라이선스 서버 장애와 invalid/revoked 상태를 구분한다.
 
-## Test / CI / Release
-- [ ] PHP syntax/static sanity PASS.
-- [ ] 제품에 맞는 unit/integration/admin E2E PASS.
-- [ ] unauthorized capability/nonce failure tests PASS.
-- [ ] migration idempotency, cron duplicate, logging redaction tests PASS(해당 시).
-- [ ] 지원 WordPress/PHP matrix가 정의되고 핵심 조합 PASS.
-- [ ] package root folder가 canonical slug와 일치한다.
-- [ ] production dependency/vendor 포함 여부가 제품 계약과 일치한다.
+## Human Final Gate — 자동화로 대체하지 않음
+- [ ] 제품 요구사항과 실제 기능이 일치한다.
+- [ ] 실제 WordPress 관리자/프런트 E2E가 통과한다.
+- [ ] 실제 지원 브라우저/반응형 화면에서 UI가 정상이다.
+- [ ] 접근성의 실제 키보드/스크린리더 흐름을 필요한 범위에서 확인했다.
 - [ ] 구버전 → 최신버전 실제 upgrade regression을 최소 1회 검증했다.
 - [ ] 기존 사용자 데이터가 유지된다.
+- [ ] EDD 유료 제품은 실제 라이선스 activation/deactivation 및 업데이트 E2E를 검증했다.
+- [ ] 외부 서비스 약관/개인정보 고지/수집 필드가 실제 구현과 일치한다.
 - [ ] 모든 변경 완료 후 마지막에 version bump를 수행했다.
 
-참조: `docs/MASTER-STANDARD.md`, `docs/ENGINEERING-CONTRACTS-V3.md`, `docs/PUBLIC-REPOSITORY-SAFETY.md` 및 제품별 추가 계약.
+참조: `docs/MASTER-STANDARD.md`, `docs/ENGINEERING-CONTRACTS-V3.md`, `docs/AUTOMATION-AND-SCAFFOLDING.md`, `docs/PUBLIC-REPOSITORY-SAFETY.md` 및 제품별 추가 계약.
