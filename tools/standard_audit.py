@@ -25,6 +25,8 @@ REQUIRED_FILES = [
     "composer.json", "phpcs.xml.dist", ".github/workflows/quality-gate.yml",
     ".github/workflows/plugin-check-free.yml", ".github/workflows/tag-version.yml",
     ".github/dependabot.yml", ".github/CODEOWNERS",
+    "assets/css/nalapps-admin-ui.css", "assets/css/nalapps-admin-typography.css",
+    "wordpress/class-nalapps-admin-ui-adapter.php",
 ]
 
 
@@ -70,9 +72,13 @@ def main() -> int:
         fail("plugin profile schema must require EDD fields for paid products")
 
     product_scaffold = (ROOT / "tools/scaffold_product.py").read_text(encoding="utf-8")
-    for token in ["easy-digital-downloads/edd-sl-sdk", "edd_sl_sdk_registry", "class-license.php", "class-update-manager.php", "pre_set_site_transient_update_plugins"]:
+    for token in [
+        "easy-digital-downloads/edd-sl-sdk", "edd_sl_sdk_registry", "class-license.php",
+        "class-update-manager.php", "pre_set_site_transient_update_plugins", "install_update",
+        "Plugin_Upgrader", "Update now", "package_url",
+    ]:
         if token not in product_scaffold:
-            fail(f"product scaffold missing EDD contract: {token}")
+            fail(f"product scaffold missing executable EDD updater contract: {token}")
 
     maintenance = "\n".join(
         (ROOT / path).read_text(encoding="utf-8")
@@ -84,9 +90,20 @@ def main() -> int:
     for token in [
         "upgrader_pre_install", "overwrite_package", "nalapps-data-backup-v1", "debug_information",
         "delete_all", "class-data-portability.php", "class-rollback-manager.php",
+        "nalapps-switch", "nalapps-admin-ui.css", "refined_admin_ui",
     ]:
         if token not in maintenance:
             fail(f"maintenance scaffold missing contract: {token}")
+
+    ui_css = (ROOT / "assets/css/nalapps-admin-ui.css").read_text(encoding="utf-8")
+    for token in ["nalapps-page-actions", "nalapps-switch", "nalapps-danger-zone", "nalapps-nav a.is-active:after"]:
+        if token not in ui_css:
+            fail(f"refined admin UI missing component: {token}")
+
+    adapter = (ROOT / "wordpress/class-nalapps-admin-ui-adapter.php").read_text(encoding="utf-8")
+    for token in ["백업/복구", "시스템 정보", "nalapps-page-actions", "updates", "maintenance"]:
+        if token not in adapter:
+            fail(f"admin UI adapter missing navigation/action contract: {token}")
 
     contract_test = (ROOT / "tools/quality_contract_test.py").read_text(encoding="utf-8")
     for token in ["hyphenated-paid-fixture_license_key", "telemetry-without-external-api", "paid-missing-edd-metadata", "sensitive-backup-option"]:
