@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 from maintenance_data import data_portability_class
+from maintenance_license import license_management_class
 from maintenance_rollback import rollback_manager_class
 from maintenance_system import maintenance_page_class, system_info_class
 from maintenance_uninstall import uninstall_php
@@ -21,17 +22,23 @@ def augment_main(target: Path, profile: dict) -> None:
     marker = "// NalApps common maintenance runtime."
     if marker in text:
         return
-    block = f'''\n\n{marker}\nrequire_once {prefix}_PATH . 'includes/class-data-portability.php';\nrequire_once {prefix}_PATH . 'includes/class-rollback-manager.php';\nrequire_once {prefix}_PATH . 'includes/class-system-info.php';\nrequire_once {prefix}_PATH . 'includes/class-maintenance-page.php';\nnew \\EOINGTI\\Plugins\\{ns}\\Data_Portability();\nnew \\EOINGTI\\Plugins\\{ns}\\Rollback_Manager();\nnew \\EOINGTI\\Plugins\\{ns}\\System_Info();\nnew \\EOINGTI\\Plugins\\{ns}\\Maintenance_Page();\n'''
+    license_line = f"new \\EOINGTI\\Plugins\\{ns}\\License();\n" if profile.get("product_type") == "edd_paid" else ""
+    block = f'''\n\n{marker}\nrequire_once {prefix}_PATH . 'includes/class-data-portability.php';\nrequire_once {prefix}_PATH . 'includes/class-rollback-manager.php';\nrequire_once {prefix}_PATH . 'includes/class-system-info.php';\nrequire_once {prefix}_PATH . 'includes/class-maintenance-page.php';\n{license_line}new \\EOINGTI\\Plugins\\{ns}\\Data_Portability();\nnew \\EOINGTI\\Plugins\\{ns}\\Rollback_Manager();\nnew \\EOINGTI\\Plugins\\{ns}\\System_Info();\nnew \\EOINGTI\\Plugins\\{ns}\\Maintenance_Page();\n'''
     path.write_text(text + block, encoding="utf-8")
 
 
-def augment_manifest(target: Path) -> None:
+def augment_manifest(target: Path, profile: dict) -> None:
     path = target / "nalapps-standard-manifest.json"
     data = json.loads(path.read_text(encoding="utf-8"))
-    for module in ("rollback", "data_portability", "safe_uninstall", "system_info", "refined_admin_ui"):
+    modules = ["rollback", "data_portability", "safe_uninstall", "system_info", "refined_admin_ui"]
+    gates = ["rollback_backup_contract", "data_backup_import_export", "uninstall_delete_gate", "system_info_redaction", "admin_ui_contract"]
+    if profile.get("product_type") == "edd_paid":
+        modules.append("product_native_license_ui")
+        gates.append("license_activation_ui")
+    for module in modules:
         if module not in data["required_modules"]:
             data["required_modules"].append(module)
-    for gate in ("rollback_backup_contract", "data_backup_import_export", "uninstall_delete_gate", "system_info_redaction", "admin_ui_contract"):
+    for gate in gates:
         if gate not in data["release_gates"]:
             data["release_gates"].append(gate)
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -71,6 +78,8 @@ def normalize_maintenance_php(target: Path) -> None:
 
 
 def add_maintenance_runtime(target: Path, profile: dict) -> Path:
+    if profile.get("product_type") == "edd_paid":
+        write_file(target, "includes/class-license.php", license_management_class(profile))
     write_file(target, "includes/class-data-portability.php", data_portability_class(profile))
     write_file(target, "includes/class-rollback-manager.php", rollback_manager_class(profile))
     write_file(target, "includes/class-system-info.php", system_info_class(profile))
@@ -79,6 +88,6 @@ def add_maintenance_runtime(target: Path, profile: dict) -> Path:
     write_file(target, "assets/css/nalapps-admin-typography.css", (ROOT / "assets/css/nalapps-admin-typography.css").read_text(encoding="utf-8"))
     write_file(target, "uninstall.php", uninstall_php(profile))
     augment_main(target, profile)
-    augment_manifest(target)
+    augment_manifest(target, profile)
     normalize_maintenance_php(target)
     return target
