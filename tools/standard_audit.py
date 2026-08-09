@@ -25,12 +25,14 @@ REQUIRED_FILES = [
     "docs/PUBLIC-REPOSITORY-SAFETY.md",
     "docs/EDD-LICENSE-AND-UPDATES.md",
     "docs/ACCEPTANCE-CHECKLIST.md",
+    "docs/ISO-29119-25010-TEST-PLAN.md",
     "tools/validate_profile.py",
     "tools/scaffold_plugin.py",
     "tools/scaffold_complete.py",
     "tools/scaffold_product.py",
     "tools/nalapps_plugin.py",
     "tools/self_test.py",
+    "tools/quality_contract_test.py",
     "tools/standard_audit.py",
     "tools/public_repo_guard.sh",
     "tools/release_manifest.py",
@@ -38,6 +40,7 @@ REQUIRED_FILES = [
     "composer.json",
     "phpcs.xml.dist",
     ".github/workflows/quality-gate.yml",
+    ".github/workflows/plugin-check-free.yml",
     ".github/workflows/tag-version.yml",
     ".github/dependabot.yml",
     ".github/CODEOWNERS",
@@ -101,6 +104,15 @@ def main() -> int:
         if token not in product_scaffold:
             fail(f"product scaffold missing EDD contract: {token}")
 
+    contract_test = (ROOT / "tools/quality_contract_test.py").read_text(encoding="utf-8")
+    for token in [
+        "hyphenated-paid-fixture_license_key",
+        "telemetry-without-external-api",
+        "paid-missing-edd-metadata",
+    ]:
+        if token not in contract_test:
+            fail(f"quality contract regression missing: {token}")
+
     cli = (ROOT / "tools/nalapps_plugin.py").read_text(encoding="utf-8")
     for token in [
         "wordpress/plugin-check-action@v1",
@@ -117,12 +129,28 @@ def main() -> int:
         fail("EOINGTI Lab CODEOWNERS entry is missing")
 
     quality = (ROOT / ".github/workflows/quality-gate.yml").read_text(encoding="utf-8")
-    if "wordpress/plugin-check-action@v1" not in quality:
-        fail("official WordPress Plugin Check must run in standard CI")
+    for token in [
+        "quality_contract_test.py",
+        "wordpress/plugin-check-action@v1",
+        "cache-dependency-path: requirements-dev.txt",
+        "nalapps-paid-api",
+    ]:
+        if token not in quality:
+            fail(f"primary quality gate missing contract: {token}")
+
+    free_plugin_check = (ROOT / ".github/workflows/plugin-check-free.yml").read_text(encoding="utf-8")
+    if "nalapps-free-basic" not in free_plugin_check or "wordpress/plugin-check-action@v1" not in free_plugin_check:
+        fail("isolated free-plugin official Plugin Check is missing")
 
     tag_workflow = (ROOT / ".github/workflows/tag-version.yml").read_text(encoding="utf-8")
-    if "Create immutable standard tag after validation" not in tag_workflow:
-        fail("standard tag workflow must validate before tagging")
+    for token in [
+        "Create immutable standard tag after validation",
+        "quality_contract_test.py",
+        "cache-dependency-path: requirements-dev.txt",
+        "nalapps-paid-api",
+    ]:
+        if token not in tag_workflow:
+            fail(f"standard tag workflow missing gate contract: {token}")
 
     print(f"PASS standard_audit version={version} required_files={len(REQUIRED_FILES)}")
     return 0
