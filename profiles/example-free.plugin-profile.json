@@ -1,0 +1,20 @@
+{
+  "plugin_name": "Example NalApps Plugin",
+  "slug": "example-nalapps-plugin",
+  "description": "Example free WordPress plugin profile.",
+  "plugin_version": "0.1.0",
+  "requires_wp": "6.5",
+  "requires_php": "7.4",
+  "product_type": "free",
+  "frontend": true,
+  "database": false,
+  "cron": false,
+  "rest_api": false,
+  "external_api": false,
+  "file_upload": false,
+  "multisite": false,
+  "telemetry": "off",
+  "plugin_uri": "https://eoingti.com/",
+  "support_uri": null,
+  "requires_plugins": []
+}
