@@ -1,90 +1,100 @@
-# NalApps WordPress Plugin Standard Kit v2.3
+# NalApps WordPress Plugin Standard v3
 
-어잉티연구소/NalApps WordPress 플러그인용 **관리자 UI + 유료 플러그인 배포 + 운영 품질 + 개발사 메타데이터 표준**입니다.
+EOINGTI Lab / 어잉티연구소의 WordPress 플러그인 공통 개발 표준입니다. 관리자 UI만이 아니라 **메타데이터, 보안, 성능, 접근성, 개인정보, 라이선스, 업데이트, 진단, 테스트, CI, 릴리스**까지 한 번에 적용하는 기준 저장소입니다.
 
 ## Canonical Company Profile
 
-모든 NalApps 플러그인은 별도 지시가 없으면 다음 기본값을 사용합니다.
+별도 지시가 없으면 모든 NalApps 플러그인은 다음 값을 상속합니다.
 
-- 개발사: `EOINGTI Lab / 어잉티연구소`
+- Developer: `EOINGTI Lab / 어잉티연구소`
 - Author: `EOINGTI Lab`
-- Author URI / 개발사 홈페이지: `https://eoingti.com/`
-- GitHub 조직: `https://github.com/Eoingtilab`
-- GitHub owner: `Eoingtilab`
-- 기본 저장소: `https://github.com/Eoingtilab/<plugin-slug>`
-- Plugin URI: 실제 제품 페이지가 있으면 해당 URL, 없으면 `https://eoingti.com/`
+- Developer / Author URI: `https://eoingti.com/`
+- GitHub: `https://github.com/Eoingtilab`
+- Repository: `https://github.com/Eoingtilab/<plugin-slug>`
+- Plugin URI: 실제 제품 페이지가 있으면 그 URL, 없으면 `https://eoingti.com/`
+- Public repository: 기본 허용, 단 secret/customer data 금지
+- Telemetry: 기본 OFF
+- Uninstall data policy: 기본 보존
 
-Canonical source: `docs/COMPANY-PROFILE.md`
+Machine-readable source: `profiles/company-profile.json`
 
-## 포함 범위
+## 한 줄 적용 지시
 
-### 1. Admin UI
-- Pretendard Variable 기반 타이포그래피
-- Blue / Navy / Soft Blue / Neutral Gray 디자인 토큰
-- WordPress 전용 UI Adapter
-- 관리 홈 / 목록 / 추가 / 수정 / 설정 화면 규칙
-- WordPress 기본 컴포넌트 충돌 대응
+> `Eoingtilab/nalapps-wordpress-plugin-standard`의 최신 안정 태그 기준으로 NalApps WordPress Plugin Standard 전체를 적용한다. 제품별 `plugin-profile.json`만 정의하고 나머지 회사 메타데이터, Admin UI, 보안, 성능, 접근성, 개인정보, REST/AJAX, 파일 업로드, DB migration, Cron, 동시실행 방지, logging, System Status, lifecycle, EDD 라이선스/업데이트, CI, 테스트, 릴리스 및 public-repository safety gate는 표준에 따라 자동 적용한다. 실제 존재하지 않는 URL이나 기능은 만들지 않는다.
 
-### 2. 선택형 EDD License & Hybrid Update Module
-유료 플러그인에서 필요할 때만 적용합니다.
+## 제품별 최소 입력
 
-- EDD Software Licensing SDK 연동
-- WordPress `플러그인` 화면 기본 업데이트 알림
-- 플러그인 내부 `업데이트` 화면
-- 현재 버전 / 최신 버전 표시
-- 수동 `업데이트 확인`
-- 유효 라이선스에서 내부 `지금 업데이트`
-- Composer `vendor/` 포함 GitHub Release ZIP 빌드 템플릿
+제품마다 가능한 한 `profiles/plugin-profile.schema.json`에 맞는 profile만 작성합니다.
 
-자세한 내용은 `docs/EDD-LICENSE-AND-UPDATES.md`를 따릅니다.
+```json
+{
+  "plugin_name": "Example NalApps Plugin",
+  "slug": "example-nalapps-plugin",
+  "product_type": "free",
+  "frontend": true,
+  "database": false,
+  "cron": false,
+  "rest_api": false,
+  "external_api": false,
+  "file_upload": false,
+  "multisite": false,
+  "telemetry": "off",
+  "edd_download_id": null,
+  "plugin_uri": null,
+  "support_uri": null,
+  "requires_plugins": []
+}
+```
 
-### 3. WordPress Plugin Standard
-모든 NalApps 플러그인에 공통 적용할 운영 품질 계층입니다.
+## 표준 계층
 
-- capability + nonce 기반 mutation 보안 계약
-- 입력 validation/sanitize, 출력 escape 규칙
-- 최소 WordPress/PHP 호환성 체크
-- 코드 버전과 DB schema version 분리
-- forward-only/idempotent DB migration template
-- 중복 방지 Cron manager
-- secret redaction + bounded retention logger
-- 읽기 전용 System Status page
-- activation/deactivation/uninstall 데이터 보존 정책
-- multisite / i18n / 외부 HTTP / release 검증 규칙
+### Admin UI
+Pretendard Variable, NalApps Blue/Navy/Soft Blue/Neutral Gray 디자인 토큰, WordPress 전용 Adapter, Dashboard/List/Add/Edit/Settings UX, 화면 범위 CSS/JS 격리를 적용합니다.
 
-핵심 문서: `docs/WORDPRESS-PLUGIN-STANDARD.md`
-재사용 코드: `wordpress/standard/`
+### Security & Runtime
+Capability + nonce, validation/sanitization/escaping, SQL 안전성, namespace/prefix isolation, compatibility guard, lifecycle, DB migration, Cron, bounded logging, read-only System Status를 적용합니다.
 
-### 4. Metadata & Documentation Standard
-플러그인마다 반복 입력하던 개발사/저장소/README 정보를 표준화합니다.
+### Engineering v3
+성능 budget, conditional asset loading, accessibility, privacy, telemetry opt-in, REST/AJAX, file upload validation, concurrency/idempotency, feature flags, backup/recovery, import/export, capability matrix, deprecated API, dependency/supply-chain, graceful failure를 적용합니다.
 
-- `docs/COMPANY-PROFILE.md`: 회사/브랜드/홈페이지/GitHub canonical defaults
-- `docs/PLUGIN-METADATA-STANDARD.md`: Header/Plugin URI/GitHub/README/readme.txt 계약
-- `wordpress/standard/plugin-header.template.php`: WordPress 플러그인 헤더 템플릿
-- `wordpress/standard/README.template.md`: 공개 저장소 README 템플릿
+### EDD Paid Products
+EDD Software Licensing SDK, WordPress 플러그인 페이지 기본 업데이트 알림, 플러그인 내부 업데이트 화면, 라이선스 상태, `get_version`, production `vendor/` 포함 Release ZIP을 적용합니다.
 
-## 기본 적용 순서
+### Public Repository Safety
+EDD/API/GitHub/WordPress/SSH/DB 자격증명, `.env` 실제 값, 고객 DB/백업/개인정보, 비공개 webhook/production dump는 공개 저장소에 커밋하지 않습니다. 예제는 placeholder만 사용합니다.
 
-1. 회사/브랜드 기본값은 `docs/COMPANY-PROFILE.md`를 자동 적용합니다.
-2. 플러그인 헤더는 `wordpress/standard/plugin-header.template.php`를 기준으로 생성합니다.
-3. GitHub 저장소는 기본적으로 `Eoingtilab/<plugin-slug>`를 사용합니다.
-4. README는 `wordpress/standard/README.template.md`를 기준으로 작성합니다.
-5. `assets/css/nalapps-admin-ui.css`와 Typography 계층을 적용합니다.
-6. `wordpress/class-nalapps-admin-ui-adapter.php`를 실제 plugin 값으로 치환합니다.
-7. `wordpress/standard/`에서 필요한 운영 표준 모듈을 적용합니다.
-8. 유료 EDD 제품이면 `wordpress/edd/` 하이브리드 업데이트 모듈을 추가 적용합니다.
-9. `docs/ACCEPTANCE-CHECKLIST.md`와 제품별 계약을 모두 검증합니다.
+### Testing / CI / Release
+PHP syntax/static checks, WPCS/PHPCS 적용 가능성, unit/integration/admin E2E, capability/nonce tests, migration idempotency, secret scan, WordPress/PHP matrix, package root/vendor 검증, version consistency와 실제 upgrade regression을 release gate로 둡니다.
 
-## 다른 플러그인 개발 시 지시 방법
+## 핵심 문서
 
-가급적 긴 지시문 대신 아래 한 문장만 사용합니다.
+- `docs/MASTER-STANDARD.md` — 최상위 개발 계약
+- `docs/COMPANY-PROFILE.md` — EOINGTI Lab canonical metadata
+- `docs/PLUGIN-METADATA-STANDARD.md` — Header/README/readme/GitHub 규칙
+- `docs/WORDPRESS-PLUGIN-STANDARD.md` — 운영·보안·DB·Cron·진단 표준
+- `docs/ENGINEERING-CONTRACTS-V3.md` — 성능·접근성·privacy·REST·동시성·복구·공급망
+- `docs/PUBLIC-REPOSITORY-SAFETY.md` — 공개 저장소 안전 게이트
+- `docs/EDD-LICENSE-AND-UPDATES.md` — 유료 제품 라이선스/업데이트
+- `docs/ACCEPTANCE-CHECKLIST.md` — 최종 PASS gate
 
-> `Eoingtilab/nalapps-admin-ui-kit`의 최신 안정 태그 기준 **NalApps WordPress Plugin Standard 전체를 적용한다.** 회사/개발사 메타데이터, eoingti.com 개발사 사이트, Eoingtilab GitHub 조직, Plugin Header, README, Admin UI, 보안, 호환성, lifecycle, migration, cron, logging, system status, release/acceptance 기준을 자동 적용하고, 유료 EDD 제품이면 라이선스와 하이브리드 업데이트 모듈까지 적용한다. 실제 존재하지 않는 제품/지원 URL은 만들지 않는다.
+## 저장소 구조
 
-제품별로 정말 필요한 값만 추가로 지정하면 됩니다: 제품명, slug, 핵심 기능, 무료/유료 여부, 외부 API/DB/Cron 사용 여부, EDD Download ID 등.
+```text
+profiles/              회사/제품 profile 및 schema
+assets/                Admin UI assets
+wordpress/             Admin UI, standard, EDD 재사용 코드
+docs/                  개발/운영/보안/release 계약
+templates/             신규 플러그인/GitHub/CI 템플릿
+VERSION                 안정 표준 버전
+```
 
-## 버전 정책
+## Release 원칙
 
-- 파괴적 클래스/Adapter 계약 변경: major 증가
-- 새 컴포넌트/공통 모듈/표준 계층: minor 증가
-- CSS/문서 오류 수정: patch 증가
+표준 또는 제품 release는 **모든 코드/문서/테스트 변경을 먼저 완료하고 VERSION 또는 제품 버전 bump를 마지막 커밋으로 수행**합니다. Tag가 불완전한 중간 상태를 가리키면 안 됩니다.
+
+## Version Policy
+
+- `3.x`: NalApps WordPress Plugin Standard 전체 개발 체계
+- 파괴적 계약 변경: major
+- 새 공통 모듈/계약: minor
+- 문서/CSS/호환성 수정: patch
