@@ -17,9 +17,6 @@ EDD_SDK_VERSION = "^1.0.2"
 
 def license_class(profile: dict) -> str:
     ns = namespace_suffix(profile["slug"])
-    # The EDD SL SDK derives option names from the registered id verbatim.
-    # Keep hyphens in the canonical slug so the generated adapter reads the
-    # same options that the SDK writes.
     option_prefix = profile["slug"]
     return f'''<?php
 /**
@@ -112,12 +109,10 @@ final class Update_Manager {{
 \t\tif ( ! isset( $transient->response ) || ! is_array( $transient->response ) ) {{
 \t\t\t$transient->response = array();
 \t\t}}
-
 \t\t$info = $this->remote_version( false );
 \t\tif ( is_wp_error( $info ) || ! $this->has_update( $info ) ) {{
 \t\t\treturn $transient;
 \t\t}}
-
 \t\t$plugin                         = plugin_basename( {prefix}_FILE );
 \t\t$transient->response[ $plugin ] = $this->update_object( $info, $plugin );
 \t\treturn $transient;
@@ -127,19 +122,18 @@ final class Update_Manager {{
 \t\tif ( ! current_user_can( 'update_plugins' ) ) {{
 \t\t\twp_die( esc_html( 'Insufficient permissions.' ) );
 \t\t}}
-
 \t\t$info           = $this->remote_version( false );
 \t\t$error          = is_wp_error( $info ) ? $info->get_error_message() : '';
 \t\t$latest         = ( ! $error && ! empty( $info['new_version'] ) ) ? (string) $info['new_version'] : 'Unavailable';
 \t\t$available      = ! $error && $this->has_update( $info );
-\t\t$download_ready = $available && License::is_valid() && ! empty( $info['download_link'] );
+\t\t$package        = ! $error ? $this->package_url( $info ) : '';
+\t\t$download_ready = $available && License::is_valid() && '' !== $package;
 \t\t$last_checked   = (string) get_option( '{checked_option}', '' );
 \t\t$checked_label  = '' !== $last_checked ? $last_checked : '-';
 
 \t\techo '<div class="wrap"><h1>' . esc_html( '{profile["plugin_name"]} Updates' ) . '</h1>';
 \t\techo '<p>' . esc_html( 'Current: ' . {prefix}_VERSION . ' / Latest: ' . $latest ) . '</p>';
 \t\techo '<p>' . esc_html( 'License: ' . License::status() . ' / Last checked: ' . $checked_label ) . '</p>';
-
 \t\tif ( $error ) {{
 \t\t\techo '<div class="notice notice-error inline"><p>' . esc_html( $error ) . '</p></div>';
 \t\t}} elseif ( $available ) {{
@@ -147,19 +141,19 @@ final class Update_Manager {{
 \t\t}} else {{
 \t\t\techo '<div class="notice notice-success inline"><p>' . esc_html( 'The plugin is up to date.' ) . '</p></div>';
 \t\t}}
-
 \t\techo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
 \t\techo '<input type="hidden" name="action" value="{action_prefix}_check_updates">';
 \t\twp_nonce_field( '{action_prefix}_check_updates' );
 \t\tsubmit_button( 'Check for updates', 'secondary', 'submit', false );
 \t\techo '</form>';
-
 \t\tif ( $download_ready ) {{
 \t\t\techo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
 \t\t\techo '<input type="hidden" name="action" value="{action_prefix}_install_update">';
 \t\t\twp_nonce_field( '{action_prefix}_install_update' );
 \t\t\tsubmit_button( 'Update now', 'primary', 'submit', false );
 \t\t\techo '</form>';
+\t\t}} elseif ( $available && License::is_valid() ) {{
+\t\t\techo '<p>' . esc_html( 'The update server reported a newer version but did not return an installable package URL.' ) . '</p>';
 \t\t}}
 \t\techo '</div>';
 \t}}
@@ -182,18 +176,16 @@ final class Update_Manager {{
 \t\t\twp_die( esc_html( 'Insufficient permissions.' ) );
 \t\t}}
 \t\tcheck_admin_referer( '{action_prefix}_install_update' );
-
 \t\tif ( ! License::is_valid() ) {{
 \t\t\twp_safe_redirect( admin_url( 'options-general.php?page={page_slug}&license_required=1' ) );
 \t\t\texit;
 \t\t}}
-
-\t\t$info = $this->remote_version( true );
-\t\tif ( is_wp_error( $info ) || ! $this->has_update( $info ) || empty( $info['download_link'] ) ) {{
+\t\t$info    = $this->remote_version( true );
+\t\t$package = ! is_wp_error( $info ) ? $this->package_url( $info ) : '';
+\t\tif ( is_wp_error( $info ) || ! $this->has_update( $info ) || '' === $package ) {{
 \t\t\twp_safe_redirect( admin_url( 'options-general.php?page={page_slug}&update_error=1' ) );
 \t\t\texit;
 \t\t}}
-
 \t\t$plugin  = plugin_basename( {prefix}_FILE );
 \t\t$updates = get_site_transient( 'update_plugins' );
 \t\tif ( ! is_object( $updates ) ) {{
@@ -204,12 +196,10 @@ final class Update_Manager {{
 \t\t}}
 \t\t$updates->response[ $plugin ] = $this->update_object( $info, $plugin );
 \t\tset_site_transient( 'update_plugins', $updates );
-
 \t\trequire_once ABSPATH . 'wp-admin/includes/file.php';
 \t\trequire_once ABSPATH . 'wp-admin/includes/class-wp-upgrader.php';
 \t\t$upgrader = new \\Plugin_Upgrader( new \\Automatic_Upgrader_Skin() );
 \t\t$result   = $upgrader->upgrade( $plugin );
-
 \t\tdelete_transient( self::CACHE_KEY );
 \t\tdelete_site_transient( 'update_plugins' );
 \t\t$state = ( is_wp_error( $result ) || false === $result ) ? 'update_error=1' : 'updated=1';
@@ -224,7 +214,6 @@ final class Update_Manager {{
 \t\t\t\treturn $cached;
 \t\t\t}}
 \t\t}}
-
 \t\t$params = array(
 \t\t\t'edd_action'  => 'get_version',
 \t\t\t'item_id'     => EDD_Config::DOWNLOAD_ID,
@@ -235,17 +224,11 @@ final class Update_Manager {{
 \t\tif ( '' !== License::key() ) {{
 \t\t\t$params['license'] = License::key();
 \t\t}}
-
 \t\t$response = wp_remote_get(
 \t\t\tadd_query_arg( $params, EDD_Config::STORE_URL ),
-\t\t\tarray(
-\t\t\t\t'timeout'     => 15,
-\t\t\t\t'sslverify'   => true,
-\t\t\t\t'redirection' => 3,
-\t\t\t)
+\t\t\tarray( 'timeout' => 15, 'sslverify' => true, 'redirection' => 3 )
 \t\t);
 \t\tupdate_option( '{checked_option}', current_time( 'mysql' ), false );
-
 \t\tif ( is_wp_error( $response ) ) {{
 \t\t\treturn $response;
 \t\t}}
@@ -253,7 +236,6 @@ final class Update_Manager {{
 \t\tif ( $code < 200 || $code >= 300 ) {{
 \t\t\treturn new \\WP_Error( 'nalapps_update_http', 'The update server returned an invalid HTTP status.' );
 \t\t}}
-
 \t\t$data = json_decode( wp_remote_retrieve_body( $response ), true );
 \t\tif ( ! is_array( $data ) ) {{
 \t\t\treturn new \\WP_Error( 'nalapps_update_json', 'The update response could not be parsed.' );
@@ -265,26 +247,64 @@ final class Update_Manager {{
 \t\t\t}}
 \t\t\treturn new \\WP_Error( 'nalapps_update_api', $message );
 \t\t}}
-
+\t\t$data = $this->normalize_remote_info( $data );
 \t\tset_transient( self::CACHE_KEY, $data, self::CACHE_TTL );
 \t\treturn $data;
 \t}}
 
+\tprivate function normalize_remote_info( $info ) {{
+\t\t$package = '';
+\t\tif ( ! empty( $info['package'] ) ) {{
+\t\t\t$package = esc_url_raw( (string) $info['package'] );
+\t\t}} elseif ( ! empty( $info['download_link'] ) ) {{
+\t\t\t$package = esc_url_raw( (string) $info['download_link'] );
+\t\t}}
+\t\t$info['package'] = $package;
+\t\tif ( empty( $info['download_link'] ) && '' !== $package ) {{
+\t\t\t$info['download_link'] = $package;
+\t\t}}
+\t\treturn $info;
+\t}}
+
+\tprivate function package_url( $info ) {{
+\t\tif ( ! is_array( $info ) ) {{
+\t\t\treturn '';
+\t\t}}
+\t\tif ( ! empty( $info['package'] ) ) {{
+\t\t\treturn esc_url_raw( (string) $info['package'] );
+\t\t}}
+\t\tif ( ! empty( $info['download_link'] ) ) {{
+\t\t\treturn esc_url_raw( (string) $info['download_link'] );
+\t\t}}
+\t\treturn '';
+\t}}
+
 \tprivate function has_update( $info ) {{
-\t\treturn is_array( $info )
-\t\t\t&& ! empty( $info['new_version'] )
+\t\treturn is_array( $info ) && ! empty( $info['new_version'] )
 \t\t\t&& version_compare( (string) $info['new_version'], {prefix}_VERSION, '>' );
 \t}}
 
 \tprivate function update_object( $info, $plugin ) {{
-\t\treturn (object) array(
+\t\t$update = array(
 \t\t\t'id'          => '{slug}',
 \t\t\t'slug'        => dirname( $plugin ),
 \t\t\t'plugin'      => $plugin,
 \t\t\t'new_version' => sanitize_text_field( (string) $info['new_version'] ),
-\t\t\t'url'         => EDD_Config::STORE_URL,
-\t\t\t'package'     => ! empty( $info['download_link'] ) ? esc_url_raw( $info['download_link'] ) : '',
+\t\t\t'url'         => ! empty( $info['url'] ) ? esc_url_raw( (string) $info['url'] ) : EDD_Config::STORE_URL,
+\t\t\t'package'     => $this->package_url( $info ),
 \t\t);
+\t\tforeach ( array( 'tested', 'requires', 'requires_php' ) as $field ) {{
+\t\t\tif ( isset( $info[ $field ] ) ) {{
+\t\t\t\t$update[ $field ] = sanitize_text_field( (string) $info[ $field ] );
+\t\t\t}}
+\t\t}}
+\t\tif ( isset( $info['icons'] ) && is_array( $info['icons'] ) ) {{
+\t\t\t$update['icons'] = $info['icons'];
+\t\t}}
+\t\tif ( isset( $info['banners'] ) && is_array( $info['banners'] ) ) {{
+\t\t\t$update['banners'] = $info['banners'];
+\t\t}}
+\t\treturn (object) $update;
 \t}}
 }}
 '''
