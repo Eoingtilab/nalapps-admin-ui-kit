@@ -1,0 +1,33 @@
+<?php
+/**
+ * NalApps uninstall.php template.
+ *
+ * IMPORTANT: Replace option names before use. Deactivation must never delete
+ * user content. Permanent deletion is opt-in and only happens from uninstall.
+ */
+
+if (!defined('WP_UNINSTALL_PLUGIN')) {
+	exit;
+}
+
+$remove_data = (bool) get_option('REPLACE_PLUGIN_remove_data_on_uninstall', false);
+if (!$remove_data) {
+	return;
+}
+
+$options = array(
+	'REPLACE_PLUGIN_settings',
+	'REPLACE_PLUGIN_db_version',
+	'REPLACE_PLUGIN_logs',
+	'REPLACE_PLUGIN_remove_data_on_uninstall',
+);
+
+foreach ($options as $option_name) {
+	delete_option($option_name);
+	delete_site_option($option_name);
+}
+
+// If the product owns custom tables, delete only tables documented as owned by
+// this plugin. Never drop shared WordPress tables or another plugin's tables.
+// If the product owns CPT content, require an explicit product policy before
+// deleting posts/attachments. Default policy is preservation.
