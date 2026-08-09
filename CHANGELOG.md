@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.3.0
+- EOINGTI Lab/어잉티연구소 canonical company profile 추가
+- 개발사 홈페이지 기본값을 `https://eoingti.com/`로 고정
+- GitHub 조직/owner 기본값을 `Eoingtilab`로 고정
+- 플러그인 저장소 기본 규칙 `Eoingtilab/<plugin-slug>` 추가
+- WordPress plugin header 공통 template 추가
+- README 공통 template 추가
+- Plugin URI / Author URI / GitHub source / readme.txt / 지원·개인정보 표기 계약 추가
+- 존재하지 않는 제품/지원 URL을 추측해 생성하지 않는 fail-safe 규칙 추가
+- Acceptance Checklist에 회사 메타데이터/README/release version consistency 검증 추가
+
 ## 2.2.0
 - NalApps Admin UI Kit을 `NalApps WordPress Plugin Standard Kit`으로 확장
 - 모든 플러그인 공통 운영 표준 문서 `docs/WORDPRESS-PLUGIN-STANDARD.md` 추가
