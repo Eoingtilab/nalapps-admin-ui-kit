@@ -71,6 +71,7 @@ final class System_Info {{
 def maintenance_page_class(profile: dict) -> str:
     ns = namespace_suffix(profile["slug"])
     slug = profile["slug"]
+    prefix = php_const_prefix(slug)
     action = slug.replace("-", "_")
     policy_option = f"{action}_uninstall_policy"
     default_policy = profile.get("uninstall_policy", "preserve")
@@ -92,6 +93,7 @@ final class Maintenance_Page {{
 
 \tpublic function __construct() {{
 \t\tadd_action( 'admin_menu', array( $this, 'register_page' ) );
+\t\tadd_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
 \t\tadd_action( 'admin_post_{action}_save_uninstall_policy', array( $this, 'save_uninstall_policy' ) );
 \t}}
 
@@ -105,6 +107,19 @@ final class Maintenance_Page {{
 \t\t);
 \t}}
 
+\tpublic function enqueue_assets( $hook ) {{
+\t\tif ( 'settings_page_{slug}-maintenance' !== $hook ) {{
+\t\t\treturn;
+\t\t}}
+\t\twp_enqueue_style( '{slug}-nalapps-admin-ui', {prefix}_URL . 'assets/css/nalapps-admin-ui.css', array(), {prefix}_VERSION );
+\t\twp_enqueue_style( '{slug}-nalapps-admin-typography', {prefix}_URL . 'assets/css/nalapps-admin-typography.css', array( '{slug}-nalapps-admin-ui' ), {prefix}_VERSION );
+\t\tadd_filter( 'admin_body_class', array( $this, 'body_class' ) );
+\t}}
+
+\tpublic function body_class( $classes ) {{
+\t\treturn $classes . ' nalapps-admin-screen';
+\t}}
+
 \tpublic function render() {{
 \t\tif ( ! current_user_can( 'manage_options' ) ) {{
 \t\t\twp_die( esc_html( 'Insufficient permissions.' ) );
@@ -112,6 +127,7 @@ final class Maintenance_Page {{
 \t\t$policy = get_option( self::POLICY_OPTION, '{default_policy}' );
 \t\t$delete = 'delete_all' === $policy;
 \t\techo '<div class="wrap nalapps-maintenance">';
+\t\techo '<div class="nalapps-page-header"><div class="nalapps-page-header__copy"><span class="nalapps-page-kicker">EOINGTI LAB · NALAPPS</span><h1>{profile["plugin_name"]} Maintenance</h1><p>Backup, restore, rollback, uninstall policy and diagnostics in one place.</p></div></div>';
 \t\techo '<div class="nalapps-panel"><div class="nalapps-panel-heading"><div><h2>Data backup and restore</h2><p>Export declared plugin data or import a compatible JSON backup. A local snapshot is created before import.</p></div></div>';
 \t\techo '<div class="nalapps-inline-actions">';
 \t\techo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '"><input type="hidden" name="action" value="{action}_export_data">';
