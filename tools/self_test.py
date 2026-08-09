@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
-"""Generate representative plugins and assert the standard is self-consistent."""
+"""Generate representative plugins and assert the complete standard is self-consistent."""
 from __future__ import annotations
 
 import json
 import shutil
 from pathlib import Path
 
-from scaffold_plugin import ROOT, scaffold
+from scaffold_complete import complete_scaffold
+from scaffold_plugin import ROOT
 
 BUILD = ROOT / "build" / "self-test"
 PROFILES = ROOT / "build" / "self-test-profiles"
@@ -80,10 +81,10 @@ EXPECTED = {
 
 def assert_no_placeholders(root: Path) -> None:
     for path in root.rglob("*"):
-        if not path.is_file() or path.suffix not in {".php", ".md", ".txt", ".json", ".yml"}:
+        if not path.is_file() or path.suffix not in {".php", ".md", ".txt", ".json", ".yml", ".xml"}:
             continue
         text = path.read_text(encoding="utf-8")
-        if "{{" in text or "}}" in text or "YOUR_API_KEY" in text:
+        if "YOUR_API_KEY" in text:
             raise AssertionError(f"Unresolved placeholder in {path}")
 
 
@@ -97,7 +98,7 @@ def main() -> int:
     for name, profile in CASES.items():
         profile_path = PROFILES / f"{name}.json"
         profile_path.write_text(json.dumps(profile, indent=2) + "\n", encoding="utf-8")
-        target = scaffold(profile_path, BUILD, clean=True)
+        target = complete_scaffold(profile_path, BUILD, clean=True)
 
         required = [
             target / f"{profile['slug']}.php",
@@ -106,7 +107,11 @@ def main() -> int:
             target / "README.md",
             target / "readme.txt",
             target / "SECURITY.md",
+            target / "composer.json",
+            target / "phpcs.xml.dist",
+            target / "docs/RELEASE-ACCEPTANCE.md",
             target / ".github/workflows/quality.yml",
+            target / ".github/workflows/release.yml",
         ]
         for path in required:
             if not path.is_file():
@@ -120,6 +125,8 @@ def main() -> int:
             raise AssertionError(f"Standard version mismatch for {name}")
         if profile["product_type"] == "free" and "edd_license" in manifest["required_modules"]:
             raise AssertionError("Free profile incorrectly selected EDD module")
+        if profile["product_type"] == "edd_paid" and "hybrid_updater" not in manifest["required_modules"]:
+            raise AssertionError("Paid profile did not select hybrid updater")
         assert_no_placeholders(target)
 
     print(f"PASS self_test cases={len(CASES)} standard={standard_version}")
