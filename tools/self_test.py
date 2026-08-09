@@ -160,20 +160,31 @@ def main() -> int:
         manifest = json.loads((target / "nalapps-standard-manifest.json").read_text(encoding="utf-8"))
         if manifest["standard_version"] != standard_version:
             raise AssertionError(f"Standard version mismatch for {name}")
-        for module in ("rollback", "data_portability", "safe_uninstall", "system_info"):
+        for module in ("rollback", "data_portability", "safe_uninstall", "system_info", "refined_admin_ui"):
             if module not in manifest["required_modules"]:
                 raise AssertionError(f"Common maintenance module missing: {module}")
         if profile["product_type"] == "free" and "edd_license" in manifest["required_modules"]:
             raise AssertionError("Free profile incorrectly selected EDD module")
         if profile["product_type"] == "edd_paid":
-            if "hybrid_updater" not in manifest["required_modules"]:
-                raise AssertionError("Paid profile did not select hybrid updater")
+            for module in ("hybrid_updater", "product_native_license_ui"):
+                if module not in manifest["required_modules"]:
+                    raise AssertionError(f"Paid profile missing required module: {module}")
+            if "license_activation_ui" not in manifest["release_gates"]:
+                raise AssertionError("Paid profile missing license activation UI release gate")
             composer = json.loads((target / "composer.json").read_text(encoding="utf-8"))
             if composer.get("require", {}).get(EDD_SDK_PACKAGE) != EDD_SDK_VERSION:
                 raise AssertionError("Paid scaffold did not include the EDD SDK runtime dependency")
             main_text = (target / f"{profile['slug']}.php").read_text(encoding="utf-8")
-            if "edd_sl_sdk_registry" not in main_text or "Update_Manager" not in main_text:
-                raise AssertionError("Paid scaffold did not wire the EDD SDK and updater")
+            if "edd_sl_sdk_registry" not in main_text or "Update_Manager" not in main_text or "new \\EOINGTI\\Plugins\\NalappsPaidApi\\License();" not in main_text:
+                raise AssertionError("Paid scaffold did not wire SDK, updater and product-native License runtime")
+            license_text = (target / "includes/class-license.php").read_text(encoding="utf-8")
+            for token in ("Serial key", "activate_license", "check_license", "deactivate_license", "admin_post_nalapps_paid_api_activate_license"):
+                if token not in license_text:
+                    raise AssertionError(f"Paid product-native license UI missing: {token}")
+            updater_text = (target / "includes/class-update-manager.php").read_text(encoding="utf-8")
+            for token in ("Update now", "install_update", "Plugin_Upgrader", "package_url"):
+                if token not in updater_text:
+                    raise AssertionError(f"Paid executable updater contract missing: {token}")
 
         main_text = (target / f"{profile['slug']}.php").read_text(encoding="utf-8")
         for class_name in ("Data_Portability", "Rollback_Manager", "System_Info", "Maintenance_Page"):
@@ -191,6 +202,10 @@ def main() -> int:
         system_info_text = (target / "includes/class-system-info.php").read_text(encoding="utf-8")
         if "debug_information" not in system_info_text:
             raise AssertionError("Site Health system information integration is missing")
+        maintenance_text = (target / "includes/class-maintenance-page.php").read_text(encoding="utf-8")
+        for token in ("Export data", "Import data", "Rollback", "Delete all plugin data on uninstall"):
+            if token not in maintenance_text:
+                raise AssertionError(f"Visible maintenance UI missing: {token}")
 
         if name == "full-capability":
             if "nalapps_full_capability_settings" not in portability_text or "nalapps_record" not in portability_text:
@@ -208,7 +223,7 @@ def main() -> int:
             raise AssertionError("EOINGTI Lab CODEOWNERS policy is missing")
         assert_no_placeholders(target)
 
-    print(f"PASS self_test cases={len(CASES)} standard={standard_version} maintenance=4")
+    print(f"PASS self_test cases={len(CASES)} standard={standard_version} maintenance=5 paid_license_ui=1")
     return 0
 
 
