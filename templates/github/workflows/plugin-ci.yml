@@ -1,0 +1,47 @@
+name: NalApps Plugin CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php: ['7.4', '8.1', '8.3']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          tools: composer:v2
+          coverage: none
+      - name: Install dependencies when composer.json exists
+        shell: bash
+        run: |
+          if [ -f composer.json ]; then
+            composer install --no-interaction --prefer-dist
+          fi
+      - name: PHP syntax
+        shell: bash
+        run: find . -type f -name '*.php' -not -path './vendor/*' -print0 | xargs -0 -n1 php -l
+      - name: Tests when configured
+        shell: bash
+        run: |
+          if [ -x vendor/bin/phpunit ]; then vendor/bin/phpunit; fi
+          if [ -x vendor/bin/phpcs ]; then vendor/bin/phpcs; fi
+      - name: Public repository safety
+        shell: bash
+        run: |
+          set -euo pipefail
+          forbidden=$(find . -type f \( -name '.env' -o -name '*.pem' -o -name '*.key' -o -name '*.p12' -o -name '*.sql' -o -name '*.sqlite' \) -not -path './vendor/*' -print)
+          if [ -n "$forbidden" ]; then echo "$forbidden"; exit 1; fi
+          if grep -RIl --exclude-dir=.git --exclude-dir=vendor 'BEGIN .*PRIVATE KEY' .; then exit 1; fi
+      - name: Version consistency hook
+        shell: bash
+        run: |
+          if [ -x tools/validate-release-metadata.sh ]; then tools/validate-release-metadata.sh; fi
