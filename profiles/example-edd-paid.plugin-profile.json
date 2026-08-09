@@ -14,6 +14,7 @@
   "file_upload": false,
   "multisite": false,
   "telemetry": "off",
+  "release_mode": "manual",
   "edd_download_id": 123,
   "edd_store_url": "https://example.com/",
   "plugin_uri": "https://eoingti.com/",
