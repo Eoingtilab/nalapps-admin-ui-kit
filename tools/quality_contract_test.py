@@ -109,6 +109,8 @@ def main() -> int:
         raise AssertionError("Legacy underscore-transformed EDD option name reintroduced")
     if not re.search(r"['\"]id['\"]\s*=>\s*['\"]hyphenated-paid-fixture['\"]", main_text):
         raise AssertionError("EDD SDK registry id does not match canonical slug")
+    if re.search(r"if\s*\([^\n]*(?:license|serial)[^\n]*\)\s*\{?\s*return\b", main_text, re.IGNORECASE):
+        raise AssertionError("Public plugin runtime must not return early based on license/serial state")
     if "easy-digital-downloads/edd-sl-sdk" not in composer.get("require", {}):
         raise AssertionError("EDD paid scaffold omitted runtime SDK dependency")
     if not (target / "includes/class-update-manager.php").is_file():
@@ -120,7 +122,7 @@ def main() -> int:
     if "'package'     => $this->package_url( $info )" not in updater_text:
         raise AssertionError("WordPress update transient must receive the executable package URL")
 
-    print("PASS quality_contract_test cases=7 edd_regression=2 privacy_regression=1")
+    print("PASS quality_contract_test cases=7 edd_regression=3 privacy_regression=1")
     return 0
 
 
