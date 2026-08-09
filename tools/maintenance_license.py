@@ -92,7 +92,7 @@ final class License {{
 
 \tpublic function activate_license() {{
 \t\t$this->assert_admin( '{action}_activate_license' );
-\t\t$key = isset( $_POST['license_key'] ) ? self::sanitize_license_key( wp_unslash( $_POST['license_key'] ) ) : '';
+\t\t$key = isset( $_POST['license_key'] ) ? self::sanitize_license_key( wp_unslash( $_POST['license_key'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce verified immediately above.
 \t\tif ( '' === $key ) {{
 \t\t\t$this->redirect( 'empty_key' );
 \t\t}}
@@ -179,9 +179,6 @@ final class License {{
 \tprivate function redirect( $state ) {{
 \t\twp_safe_redirect( admin_url( 'options-general.php?page={page_slug}&state=' . sanitize_key( $state ) ) );
 \t\texit;
-\t}}
-
-\tprivate function __construct_private() {{
 \t}}
 }}
 '''
