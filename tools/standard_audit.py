@@ -29,6 +29,7 @@ REQUIRED_FILES = [
     "tools/scaffold_plugin.py",
     "tools/scaffold_complete.py",
     "tools/scaffold_product.py",
+    "tools/nalapps_plugin.py",
     "tools/self_test.py",
     "tools/standard_audit.py",
     "tools/public_repo_guard.sh",
@@ -74,7 +75,6 @@ def main() -> int:
         "Plugin Profile",
         "Public Repository Safety",
         "Testing / CI / Release",
-        "scaffold_product.py",
         "EDD Software Licensing SDK",
     ]:
         if token not in readme:
@@ -83,10 +83,8 @@ def main() -> int:
     schema = json.loads((ROOT / "profiles/plugin-profile.schema.json").read_text(encoding="utf-8"))
     if schema.get("additionalProperties") is not False:
         fail("plugin profile schema must fail closed on unknown fields")
-
     if "release_mode" not in schema.get("properties", {}):
         fail("plugin profile schema must define release_mode")
-
     if not any(item.get("if", {}).get("properties", {}).get("product_type", {}).get("const") == "edd_paid" for item in schema.get("allOf", [])):
         fail("plugin profile schema must require EDD fields for paid products")
 
@@ -100,6 +98,17 @@ def main() -> int:
     ]:
         if token not in product_scaffold:
             fail(f"product scaffold missing EDD contract: {token}")
+
+    cli = (ROOT / "tools/nalapps_plugin.py").read_text(encoding="utf-8")
+    for token in [
+        "wordpress/plugin-check-action@v1",
+        "dependabot.yml",
+        "CODEOWNERS",
+        "ISSUE_TEMPLATE",
+        "tests/README.md",
+    ]:
+        if token not in cli:
+            fail(f"canonical CLI missing governance contract: {token}")
 
     tag_workflow = (ROOT / ".github/workflows/tag-version.yml").read_text(encoding="utf-8")
     if "Create immutable standard tag after validation" not in tag_workflow:
