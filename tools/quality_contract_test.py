@@ -7,6 +7,7 @@ ISO/IEC/IEEE 29119 test design and ISO/IEC 25010 product quality evaluation.
 from __future__ import annotations
 
 import json
+import re
 import shutil
 from pathlib import Path
 
@@ -102,7 +103,7 @@ def main() -> int:
         raise AssertionError("EDD SDK license-key option must preserve canonical hyphenated slug")
     if "hyphenated_paid_fixture_license_key" in license_text:
         raise AssertionError("Legacy underscore-transformed EDD option name reintroduced")
-    if "'id' => 'hyphenated-paid-fixture'" not in main_text:
+    if not re.search(r"['\"]id['\"]\s*=>\s*['\"]hyphenated-paid-fixture['\"]", main_text):
         raise AssertionError("EDD SDK registry id does not match canonical slug")
     if "easy-digital-downloads/edd-sl-sdk" not in composer.get("require", {}):
         raise AssertionError("EDD paid scaffold omitted runtime SDK dependency")
