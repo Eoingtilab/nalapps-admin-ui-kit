@@ -24,7 +24,7 @@ if ( ! defined( 'ABSPATH' ) ) {{
 }}
 
 final class Rollback_Manager {{
-\tconst MAX_BACKUPS = 3;
+\tconst MAX_BACKUPS  = 3;
 \tconst RELEASES_API = 'https://api.github.com/repos/Eoingtilab/{slug}/releases?per_page=30';
 
 \tpublic function __construct() {{
