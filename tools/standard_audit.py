@@ -16,6 +16,8 @@ REQUIRED_FILES = [
     "CONTRIBUTING.md",
     "profiles/company-profile.json",
     "profiles/plugin-profile.schema.json",
+    "profiles/example-free.plugin-profile.json",
+    "profiles/example-edd-paid.plugin-profile.json",
     "docs/MASTER-STANDARD.md",
     "docs/WORDPRESS-PLUGIN-STANDARD.md",
     "docs/ENGINEERING-CONTRACTS-V3.md",
@@ -26,6 +28,7 @@ REQUIRED_FILES = [
     "tools/validate_profile.py",
     "tools/scaffold_plugin.py",
     "tools/scaffold_complete.py",
+    "tools/scaffold_product.py",
     "tools/self_test.py",
     "tools/standard_audit.py",
     "tools/public_repo_guard.sh",
@@ -71,7 +74,8 @@ def main() -> int:
         "Plugin Profile",
         "Public Repository Safety",
         "Testing / CI / Release",
-        "scaffold_complete.py",
+        "scaffold_product.py",
+        "EDD Software Licensing SDK",
     ]:
         if token not in readme:
             fail(f"README missing canonical token: {token}")
@@ -80,8 +84,26 @@ def main() -> int:
     if schema.get("additionalProperties") is not False:
         fail("plugin profile schema must fail closed on unknown fields")
 
+    if "release_mode" not in schema.get("properties", {}):
+        fail("plugin profile schema must define release_mode")
+
     if not any(item.get("if", {}).get("properties", {}).get("product_type", {}).get("const") == "edd_paid" for item in schema.get("allOf", [])):
         fail("plugin profile schema must require EDD fields for paid products")
+
+    product_scaffold = (ROOT / "tools/scaffold_product.py").read_text(encoding="utf-8")
+    for token in [
+        "easy-digital-downloads/edd-sl-sdk",
+        "edd_sl_sdk_registry",
+        "class-license.php",
+        "class-update-manager.php",
+        "pre_set_site_transient_update_plugins",
+    ]:
+        if token not in product_scaffold:
+            fail(f"product scaffold missing EDD contract: {token}")
+
+    tag_workflow = (ROOT / ".github/workflows/tag-version.yml").read_text(encoding="utf-8")
+    if "Create immutable standard tag after validation" not in tag_workflow:
+        fail("standard tag workflow must validate before tagging")
 
     print(f"PASS standard_audit version={version} required_files={len(REQUIRED_FILES)}")
     return 0
