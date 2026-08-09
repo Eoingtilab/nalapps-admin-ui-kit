@@ -54,7 +54,7 @@ def main_plugin(profile: dict, company: dict, standard_version: str) -> str:
     ns = namespace_suffix(slug)
     version = profile.get("plugin_version", "0.1.0")
     header = php_header(profile, company)
-    requires = ["includes/class-plugin.php"]
+    requires = ["includes/class-plugin.php", "includes/class-system-status.php"]
     for enabled, path in [
         (profile.get("external_api"), "includes/class-http-client.php"),
         (profile.get("database"), "includes/class-db-migrator.php"),
@@ -74,6 +74,9 @@ define( '{prefix}_URL', plugin_dir_url( __FILE__ ) );
 
 {require_lines}
 
+register_activation_hook( __FILE__, array( '\\EOINGTI\\Plugins\\{ns}\\Plugin', 'activate' ) );
+register_deactivation_hook( __FILE__, array( '\\EOINGTI\\Plugins\\{ns}\\Plugin', 'deactivate' ) );
+
 add_action(
 \t'plugins_loaded',
 \tstatic function () {{
@@ -87,6 +90,43 @@ def plugin_class(profile: dict, company: dict) -> str:
     ns = namespace_suffix(profile["slug"])
     slug = profile["slug"]
     repo = company["repository_template"].replace("{plugin-slug}", slug)
+    constructor_lines = [
+        "\t\tadd_filter( 'plugin_action_links_' . plugin_basename( dirname( __DIR__ ) . '/%s.php' ), array( $this, 'action_links' ) );" % slug,
+        "\t\tnew System_Status();",
+    ]
+    if profile.get("database"):
+        constructor_lines.append("\t\tDB_Migrator::maybe_migrate();")
+    if profile.get("cron"):
+        constructor_lines.append("\t\tCron_Manager::schedule();")
+        constructor_lines.append("\t\tadd_action( Cron_Manager::HOOK, array( $this, 'run_cron' ) );")
+    if profile.get("rest_api"):
+        constructor_lines.append("\t\tadd_action( 'rest_api_init', array( 'EOINGTI\\\\Plugins\\\\%s\\\\Rest_Controller', 'register' ) );" % ns)
+    constructor = "\n".join(constructor_lines)
+
+    activate_lines = []
+    if profile.get("database"):
+        activate_lines.append("\t\tDB_Migrator::maybe_migrate();")
+    if profile.get("cron"):
+        activate_lines.append("\t\tCron_Manager::schedule();")
+    if not activate_lines:
+        activate_lines.append("\t\t// No activation mutation is required by this profile.")
+
+    deactivate_lines = []
+    if profile.get("cron"):
+        deactivate_lines.append("\t\tCron_Manager::clear();")
+    if not deactivate_lines:
+        deactivate_lines.append("\t\t// User data is intentionally preserved on deactivation.")
+
+    cron_method = ""
+    if profile.get("cron"):
+        hook = slug.replace("-", "_") + "_cron_work"
+        cron_method = f'''
+
+\tpublic function run_cron() {{
+\t\tdo_action( '{hook}' );
+\t}}
+'''
+
     return f'''<?php
 /**
  * Core plugin bootstrap.
@@ -110,14 +150,76 @@ final class Plugin {{
 \t\treturn self::$instance;
 \t}}
 
+\tpublic static function activate() {{
+{chr(10).join(activate_lines)}
+\t}}
+
+\tpublic static function deactivate() {{
+{chr(10).join(deactivate_lines)}
+\t}}
+
 \tprivate function __construct() {{
-\t\tadd_filter( 'plugin_action_links_' . plugin_basename( dirname( __DIR__ ) . '/{slug}.php' ), array( $this, 'action_links' ) );
+{constructor}
 \t}}
 
 \tpublic function action_links( $links ) {{
 \t\t$links[] = '<a href="{company["developer_site"]}" target="_blank" rel="noopener noreferrer">Developer</a>';
 \t\t$links[] = '<a href="{repo}" target="_blank" rel="noopener noreferrer">GitHub</a>';
+\t\t$links[] = '<a href="' . esc_url( admin_url( 'options-general.php?page={slug}-system-status' ) ) . '">System Status</a>';
 \t\treturn $links;
+\t}}{cron_method}
+}}
+'''
+
+
+def system_status(profile: dict) -> str:
+    ns = namespace_suffix(profile["slug"])
+    slug = profile["slug"]
+    prefix = php_const_prefix(slug)
+    return f'''<?php
+/**
+ * Read-only system status screen.
+ *
+ * @package {ns}
+ */
+
+namespace EOINGTI\\Plugins\\{ns};
+
+if ( ! defined( 'ABSPATH' ) ) {{
+\texit;
+}}
+
+final class System_Status {{
+\tpublic function __construct() {{
+\t\tadd_action( 'admin_menu', array( $this, 'register_page' ) );
+\t}}
+
+\tpublic function register_page() {{
+\t\tadd_options_page(
+\t\t\t'{profile["plugin_name"]} System Status',
+\t\t\t'{profile["plugin_name"]} Status',
+\t\t\t'manage_options',
+\t\t\t'{slug}-system-status',
+\t\t\tarray( $this, 'render' )
+\t\t);
+\t}}
+
+\tpublic function render() {{
+\t\tif ( ! current_user_can( 'manage_options' ) ) {{
+\t\t\twp_die( esc_html( 'Insufficient permissions.' ) );
+\t\t}}
+\t\t$rows = array(
+\t\t\t'Plugin version' => {prefix}_VERSION,
+\t\t\t'Standard version' => {prefix}_STANDARD_VERSION,
+\t\t\t'WordPress' => get_bloginfo( 'version' ),
+\t\t\t'PHP' => PHP_VERSION,
+\t\t\t'HTTPS' => is_ssl() ? 'yes' : 'no',
+\t\t);
+\t\techo '<div class="wrap"><h1>' . esc_html( '{profile["plugin_name"]} System Status' ) . '</h1><table class="widefat striped"><tbody>';
+\t\tforeach ( $rows as $label => $value ) {{
+\t\t\techo '<tr><th>' . esc_html( $label ) . '</th><td>' . esc_html( (string) $value ) . '</td></tr>';
+\t\t}}
+\t\techo '</tbody></table></div>';
 \t}}
 }}
 '''
@@ -126,18 +228,29 @@ final class Plugin {{
 def http_client(profile: dict) -> str:
     ns = namespace_suffix(profile["slug"])
     return f'''<?php
-/** @package {ns} */
+/**
+ * Bounded external HTTP client.
+ *
+ * @package {ns}
+ */
+
 namespace EOINGTI\\Plugins\\{ns};
 
-if ( ! defined( 'ABSPATH' ) ) {{ exit; }}
+if ( ! defined( 'ABSPATH' ) ) {{
+\texit;
+}}
 
 final class Http_Client {{
 \tpublic static function request( $url, $args = array() ) {{
 \t\tif ( ! wp_http_validate_url( $url ) || 0 !== strpos( $url, 'https://' ) ) {{
 \t\t\treturn new \\WP_Error( 'nalapps_invalid_remote_url', 'A valid HTTPS endpoint is required.' );
 \t\t}}
-\t\t$args = wp_parse_args( $args, array( 'timeout' => 15, 'sslverify' => true, 'redirection' => 3 ) );
-\t\treturn wp_remote_request( $url, $args );
+\t\t$defaults = array(
+\t\t\t'timeout' => 15,
+\t\t\t'sslverify' => true,
+\t\t\t'redirection' => 3,
+\t\t);
+\t\treturn wp_remote_request( $url, wp_parse_args( $args, $defaults ) );
 \t}}
 }}
 '''
@@ -147,10 +260,17 @@ def db_migrator(profile: dict) -> str:
     ns = namespace_suffix(profile["slug"])
     option = profile["slug"].replace("-", "_") + "_db_schema_version"
     return f'''<?php
-/** @package {ns} */
+/**
+ * Forward-only schema version coordinator.
+ *
+ * @package {ns}
+ */
+
 namespace EOINGTI\\Plugins\\{ns};
 
-if ( ! defined( 'ABSPATH' ) ) {{ exit; }}
+if ( ! defined( 'ABSPATH' ) ) {{
+\texit;
+}}
 
 final class DB_Migrator {{
 \tconst OPTION = '{option}';
@@ -158,7 +278,9 @@ final class DB_Migrator {{
 
 \tpublic static function maybe_migrate() {{
 \t\t$current = (string) get_option( self::OPTION, '0' );
-\t\tif ( version_compare( $current, self::TARGET, '>=' ) ) {{ return; }}
+\t\tif ( version_compare( $current, self::TARGET, '>=' ) ) {{
+\t\t\treturn;
+\t\t}}
 \t\tupdate_option( self::OPTION, self::TARGET, false );
 \t}}
 }}
@@ -169,17 +291,25 @@ def cron_manager(profile: dict) -> str:
     ns = namespace_suffix(profile["slug"])
     hook = profile["slug"].replace("-", "_") + "_cron_tick"
     return f'''<?php
-/** @package {ns} */
+/**
+ * Duplicate-safe cron coordinator.
+ *
+ * @package {ns}
+ */
+
 namespace EOINGTI\\Plugins\\{ns};
 
-if ( ! defined( 'ABSPATH' ) ) {{ exit; }}
+if ( ! defined( 'ABSPATH' ) ) {{
+\texit;
+}}
 
 final class Cron_Manager {{
 \tconst HOOK = '{hook}';
 
 \tpublic static function schedule() {{
 \t\tif ( ! wp_next_scheduled( self::HOOK ) ) {{
-\t\t\twp_schedule_event( time() + HOUR_IN_SECONDS, 'daily', self::HOOK );
+\t\t\t$start = (int) current_time( 'timestamp', true ) + HOUR_IN_SECONDS;
+\t\t\twp_schedule_event( $start, 'daily', self::HOOK );
 \t\t}}
 \t}}
 
@@ -194,10 +324,17 @@ def rest_controller(profile: dict) -> str:
     ns = namespace_suffix(profile["slug"])
     slug = profile["slug"]
     return f'''<?php
-/** @package {ns} */
+/**
+ * Permission-gated REST controller.
+ *
+ * @package {ns}
+ */
+
 namespace EOINGTI\\Plugins\\{ns};
 
-if ( ! defined( 'ABSPATH' ) ) {{ exit; }}
+if ( ! defined( 'ABSPATH' ) ) {{
+\texit;
+}}
 
 final class Rest_Controller {{
 \tpublic static function register() {{
@@ -207,7 +344,9 @@ final class Rest_Controller {{
 \t\t\tarray(
 \t\t\t\t'methods' => \\WP_REST_Server::READABLE,
 \t\t\t\t'callback' => array( __CLASS__, 'status' ),
-\t\t\t\t'permission_callback' => static function () {{ return current_user_can( 'manage_options' ); }},
+\t\t\t\t'permission_callback' => static function () {{
+\t\t\t\t\treturn current_user_can( 'manage_options' );
+\t\t\t\t}},
 \t\t\t)
 \t\t);
 \t}}
@@ -222,10 +361,17 @@ final class Rest_Controller {{
 def upload_guard(profile: dict) -> str:
     ns = namespace_suffix(profile["slug"])
     return f'''<?php
-/** @package {ns} */
+/**
+ * File upload validation helper.
+ *
+ * @package {ns}
+ */
+
 namespace EOINGTI\\Plugins\\{ns};
 
-if ( ! defined( 'ABSPATH' ) ) {{ exit; }}
+if ( ! defined( 'ABSPATH' ) ) {{
+\texit;
+}}
 
 final class Upload_Guard {{
 \tpublic static function validate( $tmp_name, $file_name, $allowed_mimes ) {{
@@ -247,16 +393,24 @@ def edd_config(profile: dict) -> str:
     store = profile["edd_store_url"]
     item = int(profile["edd_download_id"])
     return f'''<?php
-/** @package {ns} */
+/**
+ * EDD product metadata.
+ *
+ * @package {ns}
+ */
+
 namespace EOINGTI\\Plugins\\{ns};
 
-if ( ! defined( 'ABSPATH' ) ) {{ exit; }}
+if ( ! defined( 'ABSPATH' ) ) {{
+\texit;
+}}
 
 final class EDD_Config {{
 \tconst STORE_URL = '{store}';
 \tconst DOWNLOAD_ID = {item};
 
-\tprivate function __construct() {{}}
+\tprivate function __construct() {{
+\t}}
 }}
 '''
 
@@ -331,7 +485,7 @@ jobs:
           tools: composer:v2
           coverage: none
       - name: PHP syntax
-        run: find . -name '*.php' -not -path './vendor/*' -print0 | xargs -0 -n1 php -l
+        run: find . -name '*.php' -not -path './vendor/*' -print0 | xargs -0 -r -n1 php -l
       - name: Public repository safety
         shell: bash
         run: |
@@ -346,8 +500,12 @@ jobs:
 def manifest(profile: dict, standard_version: str) -> dict:
     modules = ["admin_ui", "security", "compatibility", "lifecycle", "system_status", "release_gate"]
     for key, module in [
-        ("database", "db_migration"), ("cron", "cron_manager"), ("rest_api", "rest_api"),
-        ("external_api", "http_client"), ("file_upload", "upload_guard"), ("multisite", "multisite_policy"),
+        ("database", "db_migration"),
+        ("cron", "cron_manager"),
+        ("rest_api", "rest_api"),
+        ("external_api", "http_client"),
+        ("file_upload", "upload_guard"),
+        ("multisite", "multisite_policy"),
     ]:
         if profile.get(key):
             modules.append(module)
@@ -358,8 +516,14 @@ def manifest(profile: dict, standard_version: str) -> dict:
         "slug": profile["slug"],
         "required_modules": modules,
         "release_gates": [
-            "profile_schema", "php_syntax", "wpcs", "secret_scan", "dependency_audit",
-            "package_root", "version_consistency", "upgrade_regression",
+            "profile_schema",
+            "php_syntax",
+            "wpcs",
+            "secret_scan",
+            "dependency_audit",
+            "package_root",
+            "version_consistency",
+            "upgrade_regression",
         ],
     }
 
@@ -383,6 +547,7 @@ def scaffold(profile_path: Path, output: Path, clean: bool = False) -> Path:
 
     write_file(target, f"{profile['slug']}.php", main_plugin(profile, company, standard_version))
     write_file(target, "includes/class-plugin.php", plugin_class(profile, company))
+    write_file(target, "includes/class-system-status.php", system_status(profile))
     if profile.get("external_api"):
         write_file(target, "includes/class-http-client.php", http_client(profile))
     if profile.get("database"):
