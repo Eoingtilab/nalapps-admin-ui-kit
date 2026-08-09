@@ -98,8 +98,7 @@ def main() -> int:
         if token not in maintenance:
             fail(f"maintenance scaffold missing contract: {token}")
 
-    release_template = (ROOT / "wordpress/edd/github-actions-release-template.yml").read_text(encoding="utf-8")
-    for token in [
+    release_tokens = [
         "Existing verified release is immutable",
         "Pin recovery build to existing tag",
         "Create immutable tag after successful build validation",
@@ -108,11 +107,23 @@ def main() -> int:
         "unzip -Z1",
         "gh release upload",
         "needs_assets",
-    ]:
+    ]
+    release_template = (ROOT / "wordpress/edd/github-actions-release-template.yml").read_text(encoding="utf-8")
+    for token in release_tokens:
         if token not in release_template:
             fail(f"EDD release template missing immutable/recovery contract: {token}")
     if "--clobber" in release_template:
         fail("EDD release template must never overwrite an existing release asset")
+
+    complete_scaffold = (ROOT / "tools/scaffold_complete.py").read_text(encoding="utf-8")
+    for token in release_tokens:
+        if token not in complete_scaffold:
+            fail(f"generated product release workflow missing immutable/recovery contract: {token}")
+    for token in ["Release Source Code", "bootstrap deadlock", "N-1 to N", "package/download URL"]:
+        if token not in complete_scaffold:
+            fail(f"generated release acceptance missing commercial lifecycle contract: {token}")
+    if "--clobber" in complete_scaffold:
+        fail("generated product release workflow must never overwrite an existing release asset")
 
     edd_docs = (ROOT / "docs/EDD-LICENSE-AND-UPDATES.md").read_text(encoding="utf-8")
     for token in [
