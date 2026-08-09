@@ -1,3 +1,13 @@
-Copyright (c) 2026 EOINGTI Lab
+SPDX-License-Identifier: GPL-2.0-or-later
 
-Internal design system for NalApps/EOINGTI Lab projects. Redistribution policy may be adjusted by the repository owner.
+NalApps WordPress Plugin Standard
+Copyright (c) 2026 EOINGTI Lab / 어잉티연구소
+
+This repository is publicly distributed under the GNU General Public License version 2 or, at your option, any later version, unless a specific third-party file states a different compatible license.
+
+Reusable WordPress/PHP templates derived from this repository are intended to remain GPL-compatible.
+
+Full license text:
+https://www.gnu.org/licenses/old-licenses/gpl-2.0.html
+
+Third-party components retain their own licenses and notices.
