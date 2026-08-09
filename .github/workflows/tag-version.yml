@@ -48,16 +48,39 @@ jobs:
           python-version: '3.12'
           cache: pip
 
-      - name: Install profile validation dependencies
+      - name: Install validation dependencies
         if: steps.version.outputs.is_new == 'true'
         run: pip install -r requirements-dev.txt
 
-      - name: Standard audit and scaffold self-test
+      - name: ISO-aligned automated test process
         if: steps.version.outputs.is_new == 'true'
         run: |
           python tools/standard_audit.py
           python tools/self_test.py
+          python tools/quality_contract_test.py
           bash tools/public_repo_guard.sh
+
+      - name: Official WordPress Plugin Check - free fixture
+        if: steps.version.outputs.is_new == 'true'
+        uses: wordpress/plugin-check-action@v1
+        with:
+          build-dir: './build/self-test/nalapps-free-basic'
+          categories: |
+            security
+            performance
+            accessibility
+            general
+
+      - name: Official WordPress Plugin Check - EDD paid fixture
+        if: steps.version.outputs.is_new == 'true'
+        uses: wordpress/plugin-check-action@v1
+        with:
+          build-dir: './build/self-test/nalapps-paid-api'
+          categories: |
+            security
+            performance
+            accessibility
+            general
 
       - name: Set up PHP and Composer
         if: steps.version.outputs.is_new == 'true'
@@ -74,6 +97,7 @@ jobs:
           composer audit
           find wordpress -name '*.php' ! -name '*.template.php' -print0 | xargs -0 -r -n1 php -l
           find build/self-test -name '*.php' -print0 | xargs -0 -r -n1 php -l
+          find build/quality-contract -name '*.php' -print0 | xargs -0 -r -n1 php -l
           vendor/bin/phpcs --standard=phpcs.xml.dist build/self-test
 
       - name: Create immutable standard tag after validation
