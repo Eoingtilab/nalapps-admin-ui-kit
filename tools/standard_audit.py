@@ -9,43 +9,22 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 REQUIRED_FILES = [
-    "README.md",
-    "VERSION",
-    "LICENSE",
-    "SECURITY.md",
-    "CONTRIBUTING.md",
-    "profiles/company-profile.json",
-    "profiles/plugin-profile.schema.json",
-    "profiles/example-free.plugin-profile.json",
-    "profiles/example-edd-paid.plugin-profile.json",
-    "docs/MASTER-STANDARD.md",
-    "docs/WORDPRESS-PLUGIN-STANDARD.md",
-    "docs/ENGINEERING-CONTRACTS-V3.md",
-    "docs/AUTOMATION-AND-SCAFFOLDING.md",
-    "docs/ROLLBACK-BACKUP-DATA-LIFECYCLE.md",
-    "docs/PUBLIC-REPOSITORY-SAFETY.md",
-    "docs/EDD-LICENSE-AND-UPDATES.md",
-    "docs/ACCEPTANCE-CHECKLIST.md",
-    "docs/ISO-29119-25010-TEST-PLAN.md",
-    "tools/validate_profile.py",
-    "tools/scaffold_plugin.py",
-    "tools/scaffold_complete.py",
-    "tools/scaffold_product.py",
-    "tools/scaffold_maintenance.py",
-    "tools/nalapps_plugin.py",
-    "tools/self_test.py",
-    "tools/quality_contract_test.py",
-    "tools/standard_audit.py",
-    "tools/public_repo_guard.sh",
-    "tools/release_manifest.py",
-    "requirements-dev.txt",
-    "composer.json",
-    "phpcs.xml.dist",
-    ".github/workflows/quality-gate.yml",
-    ".github/workflows/plugin-check-free.yml",
-    ".github/workflows/tag-version.yml",
-    ".github/dependabot.yml",
-    ".github/CODEOWNERS",
+    "README.md", "VERSION", "LICENSE", "SECURITY.md", "CONTRIBUTING.md",
+    "profiles/company-profile.json", "profiles/plugin-profile.schema.json",
+    "profiles/example-free.plugin-profile.json", "profiles/example-edd-paid.plugin-profile.json",
+    "docs/MASTER-STANDARD.md", "docs/WORDPRESS-PLUGIN-STANDARD.md",
+    "docs/ENGINEERING-CONTRACTS-V3.md", "docs/AUTOMATION-AND-SCAFFOLDING.md",
+    "docs/ROLLBACK-BACKUP-DATA-LIFECYCLE.md", "docs/PUBLIC-REPOSITORY-SAFETY.md",
+    "docs/EDD-LICENSE-AND-UPDATES.md", "docs/ACCEPTANCE-CHECKLIST.md",
+    "docs/ISO-29119-25010-TEST-PLAN.md", "tools/validate_profile.py",
+    "tools/scaffold_plugin.py", "tools/scaffold_complete.py", "tools/scaffold_product.py",
+    "tools/scaffold_maintenance.py", "tools/maintenance_data.py", "tools/maintenance_rollback.py",
+    "tools/maintenance_system.py", "tools/maintenance_uninstall.py", "tools/nalapps_plugin.py",
+    "tools/self_test.py", "tools/quality_contract_test.py", "tools/standard_audit.py",
+    "tools/public_repo_guard.sh", "tools/release_manifest.py", "requirements-dev.txt",
+    "composer.json", "phpcs.xml.dist", ".github/workflows/quality-gate.yml",
+    ".github/workflows/plugin-check-free.yml", ".github/workflows/tag-version.yml",
+    ".github/dependabot.yml", ".github/CODEOWNERS",
 ]
 
 
@@ -64,12 +43,9 @@ def main() -> int:
 
     company = json.loads((ROOT / "profiles/company-profile.json").read_text(encoding="utf-8"))
     expected = {
-        "developer_name_en": "EOINGTI Lab",
-        "author": "EOINGTI Lab",
-        "author_uri": "https://eoingti.com/",
-        "github_org": "Eoingtilab",
-        "telemetry_default": "off",
-        "uninstall_data_policy_default": "preserve",
+        "developer_name_en": "EOINGTI Lab", "author": "EOINGTI Lab",
+        "author_uri": "https://eoingti.com/", "github_org": "Eoingtilab",
+        "telemetry_default": "off", "uninstall_data_policy_default": "preserve",
     }
     for key, value in expected.items():
         if company.get(key) != value:
@@ -77,12 +53,8 @@ def main() -> int:
 
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     for token in [
-        "Eoingtilab/nalapps-wordpress-plugin-standard",
-        "https://eoingti.com/",
-        "Plugin Profile",
-        "Public Repository Safety",
-        "Testing / CI / Release",
-        "EDD Software Licensing SDK",
+        "Eoingtilab/nalapps-wordpress-plugin-standard", "https://eoingti.com/", "Plugin Profile",
+        "Public Repository Safety", "Testing / CI / Release", "EDD Software Licensing SDK",
         "Rollback / Backup / Data Lifecycle",
     ]:
         if token not in readme:
@@ -98,62 +70,39 @@ def main() -> int:
         fail("plugin profile schema must require EDD fields for paid products")
 
     product_scaffold = (ROOT / "tools/scaffold_product.py").read_text(encoding="utf-8")
-    for token in [
-        "easy-digital-downloads/edd-sl-sdk",
-        "edd_sl_sdk_registry",
-        "class-license.php",
-        "class-update-manager.php",
-        "pre_set_site_transient_update_plugins",
-    ]:
+    for token in ["easy-digital-downloads/edd-sl-sdk", "edd_sl_sdk_registry", "class-license.php", "class-update-manager.php", "pre_set_site_transient_update_plugins"]:
         if token not in product_scaffold:
             fail(f"product scaffold missing EDD contract: {token}")
 
-    maintenance = (ROOT / "tools/scaffold_maintenance.py").read_text(encoding="utf-8")
+    maintenance = "\n".join(
+        (ROOT / path).read_text(encoding="utf-8")
+        for path in [
+            "tools/scaffold_maintenance.py", "tools/maintenance_data.py", "tools/maintenance_rollback.py",
+            "tools/maintenance_system.py", "tools/maintenance_uninstall.py",
+        ]
+    )
     for token in [
-        "upgrader_pre_install",
-        "overwrite_package",
-        "nalapps-data-backup-v1",
-        "debug_information",
-        "delete_all",
-        "class-data-portability.php",
-        "class-rollback-manager.php",
+        "upgrader_pre_install", "overwrite_package", "nalapps-data-backup-v1", "debug_information",
+        "delete_all", "class-data-portability.php", "class-rollback-manager.php",
     ]:
         if token not in maintenance:
             fail(f"maintenance scaffold missing contract: {token}")
 
     contract_test = (ROOT / "tools/quality_contract_test.py").read_text(encoding="utf-8")
-    for token in [
-        "hyphenated-paid-fixture_license_key",
-        "telemetry-without-external-api",
-        "paid-missing-edd-metadata",
-        "sensitive-backup-option",
-    ]:
+    for token in ["hyphenated-paid-fixture_license_key", "telemetry-without-external-api", "paid-missing-edd-metadata", "sensitive-backup-option"]:
         if token not in contract_test:
             fail(f"quality contract regression missing: {token}")
 
     cli = (ROOT / "tools/nalapps_plugin.py").read_text(encoding="utf-8")
-    for token in [
-        "wordpress/plugin-check-action@v1",
-        "dependabot.yml",
-        "CODEOWNERS",
-        "ISSUE_TEMPLATE",
-        "tests/README.md",
-        "add_maintenance_runtime",
-    ]:
+    for token in ["wordpress/plugin-check-action@v1", "dependabot.yml", "CODEOWNERS", "ISSUE_TEMPLATE", "tests/README.md", "add_maintenance_runtime"]:
         if token not in cli:
             fail(f"canonical CLI missing governance contract: {token}")
 
-    codeowners = (ROOT / ".github/CODEOWNERS").read_text(encoding="utf-8")
-    if "@Eoingtilab" not in codeowners:
+    if "@Eoingtilab" not in (ROOT / ".github/CODEOWNERS").read_text(encoding="utf-8"):
         fail("EOINGTI Lab CODEOWNERS entry is missing")
 
     quality = (ROOT / ".github/workflows/quality-gate.yml").read_text(encoding="utf-8")
-    for token in [
-        "quality_contract_test.py",
-        "wordpress/plugin-check-action@v1",
-        "cache-dependency-path: requirements-dev.txt",
-        "nalapps-paid-api",
-    ]:
+    for token in ["quality_contract_test.py", "wordpress/plugin-check-action@v1", "cache-dependency-path: requirements-dev.txt", "nalapps-paid-api"]:
         if token not in quality:
             fail(f"primary quality gate missing contract: {token}")
 
@@ -162,12 +111,7 @@ def main() -> int:
         fail("isolated free-plugin official Plugin Check is missing")
 
     tag_workflow = (ROOT / ".github/workflows/tag-version.yml").read_text(encoding="utf-8")
-    for token in [
-        "Create immutable standard tag after validation",
-        "quality_contract_test.py",
-        "cache-dependency-path: requirements-dev.txt",
-        "nalapps-paid-api",
-    ]:
+    for token in ["Create immutable standard tag after validation", "quality_contract_test.py", "cache-dependency-path: requirements-dev.txt", "nalapps-paid-api"]:
         if token not in tag_workflow:
             fail(f"standard tag workflow missing gate contract: {token}")
 
