@@ -20,6 +20,7 @@
     "file_upload": {"type": "boolean"},
     "multisite": {"type": "boolean"},
     "telemetry": {"enum": ["off", "opt_in"]},
+    "release_mode": {"enum": ["manual", "auto_on_version_bump"]},
     "edd_download_id": {"type": ["integer", "null"], "minimum": 1},
     "edd_store_url": {"type": ["string", "null"], "format": "uri"},
     "plugin_uri": {"type": ["string", "null"], "format": "uri"},
