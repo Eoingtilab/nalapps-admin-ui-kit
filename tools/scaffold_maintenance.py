@@ -60,7 +60,8 @@ def normalize_maintenance_php(target: Path) -> None:
         "$snapshot = self::create_snapshot( 'pre-import' );\n\t\tif": "$snapshot = self::create_snapshot( 'pre-import' );\n\n\t\tif",
         "$post_id  =": "$post_id   =",
         "$args     =": "$args      =",
-        "$saved = wp_insert_post": "$saved  = wp_insert_post",
+        "$existing = $post_id ?": "$existing  = $post_id ?",
+        "$saved  = wp_insert_post": "$saved = wp_insert_post",
     }
     for path in target.rglob("*.php"):
         text = path.read_text(encoding="utf-8")
