@@ -8,7 +8,7 @@ NalApps WordPress Plugin Standard은 모든 생성 플러그인에 공통 유지
 - 코드 백업이 실패하면 해당 업데이트를 fail-closed로 차단합니다.
 - 최근 코드 백업은 최대 3개 유지합니다.
 - 롤백은 `update_plugins` capability와 nonce를 요구합니다.
-- 로컬 비상 롤백 대상은 실제 백업 목록에 존재하는 파일만 허용합니다.
+- 로컬 안전 백업 대상은 실제 백업 목록에 존재하는 파일만 허용합니다.
 - WordPress core `Plugin_Upgrader`를 사용해 선택한 패키지를 `overwrite_package=true`로 복원합니다.
 - 롤백 직전 현재 코드와 데이터도 다시 snapshot하여 되돌릴 지점을 하나 더 남깁니다.
 
@@ -49,7 +49,7 @@ NalApps Standard v4.5부터 Maintenance Center는 Elementor 계열 UX와 유사�
 - import는 `manage_options` capability + nonce + JSON 확장자 + 최대 파일 크기 + plugin slug/format 검증을 통과해야 합니다.
 - import 직전 로컬 snapshot을 자동 생성합니다.
 - 사용자 UI에서는 `Export/Import`보다 의미가 분명한 `백업 파일 다운로드 / 백업 파일 복원` 표현을 우선합니다.
-- 데이터 백업/복원, 버전 롤백, 로컬 비상백업, 제거 정책은 서로 다른 위험도이므로 Maintenance Center에서 별도 섹션으로 분리합니다.
+- 데이터 백업/복원, 버전 롤백, 로컬 안전 백업, 제거 정책은 서로 다른 위험도이므로 Maintenance Center에서 별도 섹션으로 분리합니다.
 
 Custom table은 제품별 스키마 의미가 다르므로 generic JSON import/export를 추측하지 않습니다. 대신 `custom_tables`는 완전 삭제 범위를 선언하고, 실제 portable table 데이터가 필요하면 제품 adapter와 별도 round-trip test를 추가합니다.
 
