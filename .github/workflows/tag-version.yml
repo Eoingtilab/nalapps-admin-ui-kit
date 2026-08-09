@@ -47,6 +47,7 @@ jobs:
         with:
           python-version: '3.12'
           cache: pip
+          cache-dependency-path: requirements-dev.txt
 
       - name: Install validation dependencies
         if: steps.version.outputs.is_new == 'true'
