@@ -6,8 +6,9 @@ import json
 import shutil
 from pathlib import Path
 
+from nalapps_plugin import create_project
 from scaffold_plugin import ROOT
-from scaffold_product import EDD_SDK_PACKAGE, EDD_SDK_VERSION, product_scaffold
+from scaffold_product import EDD_SDK_PACKAGE, EDD_SDK_VERSION
 
 BUILD = ROOT / "build" / "self-test"
 PROFILES = ROOT / "build" / "self-test-profiles"
@@ -89,7 +90,7 @@ EXPECTED = {
 
 def assert_no_placeholders(root: Path) -> None:
     for path in root.rglob("*"):
-        if not path.is_file() or path.suffix not in {".php", ".md", ".txt", ".json", ".yml", ".xml"}:
+        if not path.is_file() or path.suffix not in {".php", ".md", ".txt", ".json", ".yml", ".yaml", ".xml"}:
             continue
         text = path.read_text(encoding="utf-8")
         if "YOUR_API_KEY" in text:
@@ -106,7 +107,7 @@ def main() -> int:
     for name, profile in CASES.items():
         profile_path = PROFILES / f"{name}.json"
         profile_path.write_text(json.dumps(profile, indent=2) + "\n", encoding="utf-8")
-        target = product_scaffold(profile_path, BUILD, clean=True)
+        target = create_project(profile_path, BUILD, clean=True)
 
         required = [
             target / f"{profile['slug']}.php",
@@ -120,8 +121,16 @@ def main() -> int:
             target / "composer.json",
             target / "phpcs.xml.dist",
             target / "docs/RELEASE-ACCEPTANCE.md",
+            target / "tests/README.md",
+            target / ".distignore",
             target / ".github/workflows/quality.yml",
             target / ".github/workflows/release.yml",
+            target / ".github/workflows/plugin-check.yml",
+            target / ".github/dependabot.yml",
+            target / ".github/CODEOWNERS",
+            target / ".github/ISSUE_TEMPLATE/bug_report.yml",
+            target / ".github/ISSUE_TEMPLATE/feature_request.yml",
+            target / ".github/pull_request_template.md",
         ]
         for path in required:
             if not path.is_file():
@@ -148,6 +157,11 @@ def main() -> int:
         release_workflow = (target / ".github/workflows/release.yml").read_text(encoding="utf-8")
         if profile.get("release_mode", "manual") == "manual" and "workflow_dispatch" not in release_workflow:
             raise AssertionError("Manual release mode lost workflow_dispatch")
+        plugin_check = (target / ".github/workflows/plugin-check.yml").read_text(encoding="utf-8")
+        if "wordpress/plugin-check-action@v1" not in plugin_check:
+            raise AssertionError("Official WordPress Plugin Check action is missing")
+        if "@Eoingtilab" not in (target / ".github/CODEOWNERS").read_text(encoding="utf-8"):
+            raise AssertionError("EOINGTI Lab CODEOWNERS policy is missing")
         assert_no_placeholders(target)
 
     print(f"PASS self_test cases={len(CASES)} standard={standard_version}")
