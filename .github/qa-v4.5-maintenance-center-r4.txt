@@ -1,0 +1,1 @@
+temporary QA trigger after WPCS-clean maintenance generator rewrite
