@@ -27,6 +27,7 @@ REQUIRED_FILES = [
     ".github/dependabot.yml", ".github/CODEOWNERS",
     "assets/css/nalapps-admin-ui.css", "assets/css/nalapps-admin-typography.css",
     "wordpress/class-nalapps-admin-ui-adapter.php",
+    "wordpress/edd/github-actions-release-template.yml",
 ]
 
 
@@ -96,6 +97,30 @@ def main() -> int:
     ]:
         if token not in maintenance:
             fail(f"maintenance scaffold missing contract: {token}")
+
+    release_template = (ROOT / "wordpress/edd/github-actions-release-template.yml").read_text(encoding="utf-8")
+    for token in [
+        "Existing verified release is immutable",
+        "Pin recovery build to existing tag",
+        "Create immutable tag after successful build validation",
+        "Create release or backfill missing assets",
+        "sha256sum",
+        "unzip -Z1",
+        "gh release upload",
+        "needs_assets",
+    ]:
+        if token not in release_template:
+            fail(f"EDD release template missing immutable/recovery contract: {token}")
+    if "--clobber" in release_template:
+        fail("EDD release template must never overwrite an existing release asset")
+
+    edd_docs = (ROOT / "docs/EDD-LICENSE-AND-UPDATES.md").read_text(encoding="utf-8")
+    for token in [
+        "bootstrap deadlock", "Release Source Code", "N-1 → N", "missing-asset backfill",
+        "Update File", "package", "download_link",
+    ]:
+        if token not in edd_docs:
+            fail(f"EDD commercial lifecycle contract missing: {token}")
 
     ui_css = (ROOT / "assets/css/nalapps-admin-ui.css").read_text(encoding="utf-8")
     for token in ["nalapps-page-actions", "nalapps-switch", "nalapps-danger-zone", "nalapps-nav a.is-active:after"]:
