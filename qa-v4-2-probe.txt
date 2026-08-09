@@ -1,0 +1,1 @@
+Temporary QA trigger for NalApps Standard v4.2 refined UI and maintenance contract. Do not merge.
