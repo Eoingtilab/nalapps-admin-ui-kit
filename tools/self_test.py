@@ -197,13 +197,28 @@ def main() -> int:
         if "nalapps-data-backup-v1" not in portability_text or "pre-import" not in portability_text:
             raise AssertionError("Data portability/snapshot contract is missing")
         rollback_text = (target / "includes/class-rollback-manager.php").read_text(encoding="utf-8")
-        if "upgrader_pre_install" not in rollback_text or "overwrite_package" not in rollback_text:
-            raise AssertionError("Pre-update backup/rollback contract is missing")
+        for token in (
+            "upgrader_pre_install",
+            "overwrite_package",
+            "list_release_versions",
+            "release_rollback",
+            "browser_download_url",
+            "prerelease",
+        ):
+            if token not in rollback_text:
+                raise AssertionError(f"Pre-update/verified rollback contract is missing: {token}")
         system_info_text = (target / "includes/class-system-info.php").read_text(encoding="utf-8")
         if "debug_information" not in system_info_text:
             raise AssertionError("Site Health system information integration is missing")
         maintenance_text = (target / "includes/class-maintenance-page.php").read_text(encoding="utf-8")
-        for token in ("Export data", "Import data", "Rollback", "Delete all plugin data on uninstall"):
+        for token in (
+            "Download data backup",
+            "Restore backup",
+            "Version rollback",
+            "Rollback to selected version",
+            "Local safety backups",
+            "Delete all plugin data on uninstall",
+        ):
             if token not in maintenance_text:
                 raise AssertionError(f"Visible maintenance UI missing: {token}")
 
@@ -223,7 +238,7 @@ def main() -> int:
             raise AssertionError("EOINGTI Lab CODEOWNERS policy is missing")
         assert_no_placeholders(target)
 
-    print(f"PASS self_test cases={len(CASES)} standard={standard_version} maintenance=5 paid_license_ui=1")
+    print(f"PASS self_test cases={len(CASES)} standard={standard_version} maintenance=6 paid_license_ui=1")
     return 0
 
 
