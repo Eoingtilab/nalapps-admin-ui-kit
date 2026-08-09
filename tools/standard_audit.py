@@ -22,6 +22,7 @@ REQUIRED_FILES = [
     "docs/WORDPRESS-PLUGIN-STANDARD.md",
     "docs/ENGINEERING-CONTRACTS-V3.md",
     "docs/AUTOMATION-AND-SCAFFOLDING.md",
+    "docs/ROLLBACK-BACKUP-DATA-LIFECYCLE.md",
     "docs/PUBLIC-REPOSITORY-SAFETY.md",
     "docs/EDD-LICENSE-AND-UPDATES.md",
     "docs/ACCEPTANCE-CHECKLIST.md",
@@ -30,6 +31,7 @@ REQUIRED_FILES = [
     "tools/scaffold_plugin.py",
     "tools/scaffold_complete.py",
     "tools/scaffold_product.py",
+    "tools/scaffold_maintenance.py",
     "tools/nalapps_plugin.py",
     "tools/self_test.py",
     "tools/quality_contract_test.py",
@@ -81,6 +83,7 @@ def main() -> int:
         "Public Repository Safety",
         "Testing / CI / Release",
         "EDD Software Licensing SDK",
+        "Rollback / Backup / Data Lifecycle",
     ]:
         if token not in readme:
             fail(f"README missing canonical token: {token}")
@@ -88,8 +91,9 @@ def main() -> int:
     schema = json.loads((ROOT / "profiles/plugin-profile.schema.json").read_text(encoding="utf-8"))
     if schema.get("additionalProperties") is not False:
         fail("plugin profile schema must fail closed on unknown fields")
-    if "release_mode" not in schema.get("properties", {}):
-        fail("plugin profile schema must define release_mode")
+    for key in ("release_mode", "uninstall_policy", "data_contract"):
+        if key not in schema.get("properties", {}):
+            fail(f"plugin profile schema must define {key}")
     if not any(item.get("if", {}).get("properties", {}).get("product_type", {}).get("const") == "edd_paid" for item in schema.get("allOf", [])):
         fail("plugin profile schema must require EDD fields for paid products")
 
@@ -104,11 +108,25 @@ def main() -> int:
         if token not in product_scaffold:
             fail(f"product scaffold missing EDD contract: {token}")
 
+    maintenance = (ROOT / "tools/scaffold_maintenance.py").read_text(encoding="utf-8")
+    for token in [
+        "upgrader_pre_install",
+        "overwrite_package",
+        "nalapps-data-backup-v1",
+        "debug_information",
+        "delete_all",
+        "class-data-portability.php",
+        "class-rollback-manager.php",
+    ]:
+        if token not in maintenance:
+            fail(f"maintenance scaffold missing contract: {token}")
+
     contract_test = (ROOT / "tools/quality_contract_test.py").read_text(encoding="utf-8")
     for token in [
         "hyphenated-paid-fixture_license_key",
         "telemetry-without-external-api",
         "paid-missing-edd-metadata",
+        "sensitive-backup-option",
     ]:
         if token not in contract_test:
             fail(f"quality contract regression missing: {token}")
@@ -120,6 +138,7 @@ def main() -> int:
         "CODEOWNERS",
         "ISSUE_TEMPLATE",
         "tests/README.md",
+        "add_maintenance_runtime",
     ]:
         if token not in cli:
             fail(f"canonical CLI missing governance contract: {token}")
