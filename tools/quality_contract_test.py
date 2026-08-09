@@ -99,6 +99,7 @@ def main() -> int:
     paid_path = write_profile("paid", paid)
     target = product_scaffold(paid_path, TMP / "out", clean=True)
     license_text = (target / "includes/class-license.php").read_text(encoding="utf-8")
+    updater_text = (target / "includes/class-update-manager.php").read_text(encoding="utf-8")
     main_text = (target / f"{paid['slug']}.php").read_text(encoding="utf-8")
     composer = json.loads((target / "composer.json").read_text(encoding="utf-8"))
 
@@ -112,8 +113,14 @@ def main() -> int:
         raise AssertionError("EDD paid scaffold omitted runtime SDK dependency")
     if not (target / "includes/class-update-manager.php").is_file():
         raise AssertionError("EDD paid scaffold omitted hybrid updater")
+    if "package_url" not in updater_text or "$info['package']" not in updater_text:
+        raise AssertionError("EDD hybrid updater must consume the canonical package field")
+    if "elseif ( ! empty( $info['download_link'] ) )" not in updater_text:
+        raise AssertionError("EDD hybrid updater must retain download_link only as compatibility fallback")
+    if "'package'     => $this->package_url( $info )" not in updater_text:
+        raise AssertionError("WordPress update transient must receive the executable package URL")
 
-    print("PASS quality_contract_test cases=7 edd_regression=1 privacy_regression=1")
+    print("PASS quality_contract_test cases=7 edd_regression=2 privacy_regression=1")
     return 0
 
 
