@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate NalApps redacted system information and maintenance UI."""
+"""Generate NalApps redacted system information and refined maintenance UI."""
 from __future__ import annotations
 
 from scaffold_plugin import namespace_suffix, php_const_prefix
@@ -110,14 +110,10 @@ final class Maintenance_Page {{
 \t\t\twp_die( esc_html( 'Insufficient permissions.' ) );
 \t\t}}
 \t\t$policy = get_option( self::POLICY_OPTION, '{default_policy}' );
-\t\techo '<div class="wrap"><h1>' . esc_html( '{profile["plugin_name"]} Maintenance' ) . '</h1>';
-\t\techo '<h2>System Information</h2><table class="widefat striped"><tbody>';
-\t\tforeach ( System_Info::values() as $label => $value ) {{
-\t\t\techo '<tr><th>' . esc_html( $label ) . '</th><td>' . esc_html( (string) $value ) . '</td></tr>';
-\t\t}}
-\t\techo '</tbody></table>';
-
-\t\techo '<h2>Data Backup</h2><p>Export a portable JSON backup or import one created by this plugin. A local snapshot is created before import.</p>';
+\t\t$delete = 'delete_all' === $policy;
+\t\techo '<div class="wrap nalapps-maintenance">';
+\t\techo '<div class="nalapps-panel"><div class="nalapps-panel-heading"><div><h2>Data backup and restore</h2><p>Export declared plugin data or import a compatible JSON backup. A local snapshot is created before import.</p></div></div>';
+\t\techo '<div class="nalapps-inline-actions">';
 \t\techo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '"><input type="hidden" name="action" value="{action}_export_data">';
 \t\twp_nonce_field( '{action}_export_data' );
 \t\tsubmit_button( 'Export data', 'secondary', 'submit', false );
@@ -126,28 +122,35 @@ final class Maintenance_Page {{
 \t\twp_nonce_field( '{action}_import_data' );
 \t\techo '<input type="file" name="nalapps_backup" accept="application/json,.json" required> ';
 \t\tsubmit_button( 'Import data', 'secondary', 'submit', false );
-\t\techo '</form>';
+\t\techo '</form></div></div>';
 
-\t\techo '<h2>Rollback</h2><p>Code rollback does not automatically reverse database migrations. Restore data separately when required.</p>';
+\t\techo '<div class="nalapps-panel"><div class="nalapps-panel-heading"><div><h2>Rollback</h2><p>A code backup and data snapshot are created automatically before plugin updates. Code rollback does not silently reverse database migrations.</p></div></div>';
 \t\t$backups = Rollback_Manager::list_backups();
 \t\tif ( empty( $backups ) ) {{
-\t\t\techo '<p>No rollback backup is available yet. One is created automatically before this plugin is updated.</p>';
+\t\t\techo '<div class="nalapps-notice">No rollback backup is available yet. One is created automatically before this plugin is updated.</div>';
 \t\t}}
+\t\techo '<div class="nalapps-stack">';
 \t\tforeach ( $backups as $backup ) {{
-\t\t\techo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="margin-bottom:8px"><input type="hidden" name="action" value="{action}_rollback"><input type="hidden" name="backup" value="' . esc_attr( $backup ) . '">';
+\t\t\techo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="nalapps-inline-actions"><input type="hidden" name="action" value="{action}_rollback"><input type="hidden" name="backup" value="' . esc_attr( $backup ) . '">';
 \t\t\twp_nonce_field( '{action}_rollback' );
 \t\t\techo '<code>' . esc_html( $backup ) . '</code> ';
 \t\t\tsubmit_button( 'Rollback', 'secondary', 'submit', false );
 \t\t\techo '</form>';
 \t\t}}
+\t\techo '</div></div>';
 
-\t\techo '<h2>Uninstall Data Policy</h2><p>Data is preserved by default. Complete deletion is irreversible and runs only when the plugin is uninstalled.</p>';
+\t\techo '<div class="nalapps-panel nalapps-danger-zone"><div class="nalapps-panel-heading"><div><h2>Uninstall data policy</h2><p>Data is preserved by default. Enable complete deletion only when you want plugin-owned data removed during uninstall.</p></div></div>';
 \t\techo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '"><input type="hidden" name="action" value="{action}_save_uninstall_policy">';
 \t\twp_nonce_field( '{action}_save_uninstall_policy' );
-\t\techo '<label><input type="radio" name="policy" value="preserve" ' . checked( 'preserve', $policy, false ) . '> Preserve data</label><br>';
-\t\techo '<label><input type="radio" name="policy" value="delete_all" ' . checked( 'delete_all', $policy, false ) . '> Delete all declared plugin data on uninstall</label>';
-\t\tsubmit_button( 'Save uninstall policy' );
+\t\techo '<div class="nalapps-toggle-row"><div class="nalapps-toggle-copy"><strong>Delete all plugin data on uninstall</strong><span>This is irreversible when WordPress actually uninstalls the plugin.</span></div><label class="nalapps-switch"><input type="checkbox" name="delete_all" value="1" ' . checked( true, $delete, false ) . '><span class="nalapps-switch__track"></span></label></div>';
+\t\tsubmit_button( 'Save uninstall policy', 'secondary' );
 \t\techo '</form></div>';
+
+\t\techo '<div class="nalapps-panel"><div class="nalapps-panel-heading"><div><h2>System information</h2><p>Diagnostic values are intentionally redacted and never include license keys, API keys or passwords.</p></div></div><table class="widefat striped"><tbody>';
+\t\tforeach ( System_Info::values() as $label => $value ) {{
+\t\t\techo '<tr><th>' . esc_html( $label ) . '</th><td>' . esc_html( (string) $value ) . '</td></tr>';
+\t\t}}
+\t\techo '</tbody></table></div></div>';
 \t}}
 
 \tpublic function save_uninstall_policy() {{
@@ -155,10 +158,7 @@ final class Maintenance_Page {{
 \t\t\twp_die( esc_html( 'Insufficient permissions.' ) );
 \t\t}}
 \t\tcheck_admin_referer( '{action}_save_uninstall_policy' );
-\t\t$policy = isset( $_POST['policy'] ) ? sanitize_key( wp_unslash( $_POST['policy'] ) ) : 'preserve';
-\t\tif ( ! in_array( $policy, array( 'preserve', 'delete_all' ), true ) ) {{
-\t\t\t$policy = 'preserve';
-\t\t}}
+\t\t$policy = isset( $_POST['delete_all'] ) && '1' === sanitize_text_field( wp_unslash( $_POST['delete_all'] ) ) ? 'delete_all' : 'preserve';
 \t\tupdate_option( self::POLICY_OPTION, $policy, false );
 \t\twp_safe_redirect( admin_url( 'options-general.php?page={slug}-maintenance&state=policy_saved' ) );
 \t\texit;
