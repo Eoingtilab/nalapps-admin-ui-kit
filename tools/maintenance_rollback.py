@@ -24,11 +24,13 @@ if ( ! defined( 'ABSPATH' ) ) {{
 }}
 
 final class Rollback_Manager {{
-\tconst MAX_BACKUPS  = 3;
-\tconst RELEASES_API = 'https://api.github.com/repos/Eoingtilab/{slug}/releases?per_page=30';
+\tconst MAX_BACKUPS             = 3;
+\tconst RELEASES_API            = 'https://api.github.com/repos/Eoingtilab/{slug}/releases?per_page=30';
+\tconst ACTIVATION_STATE_OPTION = '{action}_update_activation_state';
 
 \tpublic function __construct() {{
 \t\tadd_filter( 'upgrader_pre_install', array( $this, 'backup_before_update' ), 10, 2 );
+\t\tadd_action( 'upgrader_process_complete', array( $this, 'restore_activation_after_update' ), 20, 2 );
 \t\tadd_action( 'admin_post_{action}_rollback', array( $this, 'rollback' ) );
 \t\tadd_action( 'admin_post_{action}_release_rollback', array( $this, 'rollback_release' ) );
 \t}}
@@ -47,6 +49,16 @@ final class Rollback_Manager {{
 \t\tif ( plugin_basename( {prefix}_FILE ) !== $plugin ) {{
 \t\t\treturn $response;
 \t\t}}
+\t\trequire_once ABSPATH . 'wp-admin/includes/plugin.php';
+\t\tupdate_option(
+\t\t\tself::ACTIVATION_STATE_OPTION,
+\t\t\tarray(
+\t\t\t\t'plugin'  => $plugin,
+\t\t\t\t'active'  => is_plugin_active( $plugin ),
+\t\t\t\t'network' => is_multisite() && is_plugin_active_for_network( $plugin ),
+\t\t\t),
+\t\t\tfalse
+\t\t);
 \t\t$backup = self::create_code_backup( 'pre-update' );
 \t\tif ( is_wp_error( $backup ) ) {{
 \t\t\treturn $backup;
@@ -56,6 +68,32 @@ final class Rollback_Manager {{
 \t\t\treturn $snapshot;
 \t\t}}
 \t\treturn $response;
+\t}}
+
+\tpublic function restore_activation_after_update( $upgrader, $hook_extra ) {{
+\t\tunset( $upgrader );
+\t\tif ( empty( $hook_extra['type'] ) || 'plugin' !== $hook_extra['type'] || empty( $hook_extra['action'] ) || 'update' !== $hook_extra['action'] ) {{
+\t\t\treturn;
+\t\t}}
+\t\t$plugin  = plugin_basename( {prefix}_FILE );
+\t\t$plugins = array();
+\t\tif ( ! empty( $hook_extra['plugins'] ) && is_array( $hook_extra['plugins'] ) ) {{
+\t\t\t$plugins = array_map( 'strval', $hook_extra['plugins'] );
+\t\t}} elseif ( ! empty( $hook_extra['plugin'] ) ) {{
+\t\t\t$plugins = array( (string) $hook_extra['plugin'] );
+\t\t}}
+\t\tif ( ! in_array( $plugin, $plugins, true ) ) {{
+\t\t\treturn;
+\t\t}}
+\t\t$state = get_option( self::ACTIVATION_STATE_OPTION, array() );
+\t\tdelete_option( self::ACTIVATION_STATE_OPTION );
+\t\tif ( ! is_array( $state ) || empty( $state['active'] ) || empty( $state['plugin'] ) || $plugin !== $state['plugin'] ) {{
+\t\t\treturn;
+\t\t}}
+\t\trequire_once ABSPATH . 'wp-admin/includes/plugin.php';
+\t\tif ( ! is_plugin_active( $plugin ) ) {{
+\t\t\tactivate_plugin( $plugin, '', ! empty( $state['network'] ), true );
+\t\t}}
 \t}}
 
 \tpublic static function create_code_backup( $reason = 'manual' ) {{
@@ -169,6 +207,9 @@ final class Rollback_Manager {{
 \t\tif ( is_wp_error( $current_backup ) || is_wp_error( $data_snapshot ) ) {{
 \t\t\t$this->redirect( 'rollback_error' );
 \t\t}}
+\t\trequire_once ABSPATH . 'wp-admin/includes/plugin.php';
+\t\t$plugin     = plugin_basename( {prefix}_FILE );
+\t\t$was_active = is_plugin_active( $plugin );
 \t\trequire_once ABSPATH . 'wp-admin/includes/file.php';
 \t\trequire_once ABSPATH . 'wp-admin/includes/class-wp-upgrader.php';
 \t\t$upgrader = new \\Plugin_Upgrader( new \\Automatic_Upgrader_Skin() );
@@ -177,6 +218,9 @@ final class Rollback_Manager {{
 \t\tdelete_transient( '{action}_release_rollback_versions' );
 \t\tif ( is_wp_error( $result ) || false === $result ) {{
 \t\t\t$this->redirect( 'rollback_error' );
+\t\t}}
+\t\tif ( $was_active && ! is_plugin_active( $plugin ) ) {{
+\t\t\tactivate_plugin( $plugin, '', false, true );
 \t\t}}
 \t\t$this->redirect( 'rolled_back' );
 \t}}
