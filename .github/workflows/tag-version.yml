@@ -1,4 +1,4 @@
-name: Tag VERSION
+name: Validate and Tag Standard VERSION
 
 on:
   push:
@@ -13,7 +13,7 @@ permissions:
   contents: write
 
 jobs:
-  tag:
+  validate-and-tag:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -21,28 +21,69 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Read version
+      - name: Read immutable version state
         id: version
         shell: bash
         run: |
+          set -euo pipefail
           VERSION="$(tr -d '[:space:]' < VERSION)"
           if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
             echo "Invalid VERSION: $VERSION" >&2
             exit 1
           fi
+          TAG="v$VERSION"
+          if git rev-parse "$TAG" >/dev/null 2>&1; then IS_NEW=false; else IS_NEW=true; fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "is_new=$IS_NEW" >> "$GITHUB_OUTPUT"
 
-      - name: Create tag if missing
+      - name: Existing standard release is immutable
+        if: steps.version.outputs.is_new != 'true'
+        run: echo "${{ steps.version.outputs.tag }} already exists; no retagging is allowed."
+
+      - name: Set up Python
+        if: steps.version.outputs.is_new == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install profile validation dependencies
+        if: steps.version.outputs.is_new == 'true'
+        run: pip install -r requirements-dev.txt
+
+      - name: Standard audit and scaffold self-test
+        if: steps.version.outputs.is_new == 'true'
+        run: |
+          python tools/standard_audit.py
+          python tools/self_test.py
+          bash tools/public_repo_guard.sh
+
+      - name: Set up PHP and Composer
+        if: steps.version.outputs.is_new == 'true'
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          tools: composer:v2
+          coverage: none
+
+      - name: WPCS and dependency gate
+        if: steps.version.outputs.is_new == 'true'
+        run: |
+          composer update --no-interaction --prefer-dist --no-progress
+          composer audit
+          find wordpress -name '*.php' ! -name '*.template.php' -print0 | xargs -0 -r -n1 php -l
+          find build/self-test -name '*.php' -print0 | xargs -0 -r -n1 php -l
+          vendor/bin/phpcs --standard=phpcs.xml.dist build/self-test
+
+      - name: Create immutable standard tag after validation
+        if: steps.version.outputs.is_new == 'true'
         env:
           TAG: ${{ steps.version.outputs.tag }}
         shell: bash
         run: |
-          if git rev-parse "$TAG" >/dev/null 2>&1; then
-            echo "$TAG already exists; nothing to do."
-            exit 0
-          fi
+          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag -a "$TAG" -m "NalApps Admin UI Kit $TAG"
+          git tag -a "$TAG" -m "NalApps WordPress Plugin Standard $TAG"
           git push origin "$TAG"
