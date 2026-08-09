@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -16,33 +17,55 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Read plugin version
+      - name: Read version and immutable release state
         id: version
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           MAIN_FILE="my-plugin.php"
+          PLUGIN_DIR="my-plugin"
           version="$(sed -n 's/^ \* Version: \(.*\)$/\1/p' "$MAIN_FILE" | head -n 1 | tr -d '\r')"
           test -n "$version"
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "tag=v$version" >> "$GITHUB_OUTPUT"
-          echo "asset=my-plugin-$version.zip" >> "$GITHUB_OUTPUT"
+          tag="v$version"
+          asset="$PLUGIN_DIR-$version.zip"
+          checksum="$asset.sha256"
 
-      - name: Create version tag when missing
+          if git rev-parse "$tag" >/dev/null 2>&1; then tag_exists=true; else tag_exists=false; fi
+          if gh release view "$tag" >/dev/null 2>&1; then
+            release_exists=true
+            assets="$(gh release view "$tag" --json assets --jq '.assets[].name' 2>/dev/null || true)"
+          else
+            release_exists=false
+            assets=""
+          fi
+          if printf '%s\n' "$assets" | grep -Fxq "$asset"; then asset_exists=true; else asset_exists=false; fi
+          if printf '%s\n' "$assets" | grep -Fxq "$checksum"; then checksum_exists=true; else checksum_exists=false; fi
+          if [ "$release_exists" = true ] && [ "$asset_exists" = true ] && [ "$checksum_exists" = true ]; then needs_assets=false; else needs_assets=true; fi
+
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "asset=$asset" >> "$GITHUB_OUTPUT"
+          echo "checksum=$checksum" >> "$GITHUB_OUTPUT"
+          echo "tag_exists=$tag_exists" >> "$GITHUB_OUTPUT"
+          echo "release_exists=$release_exists" >> "$GITHUB_OUTPUT"
+          echo "needs_assets=$needs_assets" >> "$GITHUB_OUTPUT"
+
+      - name: Existing verified release is immutable
+        if: steps.version.outputs.needs_assets != 'true'
+        run: echo "${{ steps.version.outputs.tag }} already has verified ZIP and SHA256 assets; no overwrite is allowed."
+
+      - name: Pin recovery build to existing tag
+        if: steps.version.outputs.needs_assets == 'true' && steps.version.outputs.tag_exists == 'true'
         shell: bash
-        env:
-          TAG: ${{ steps.version.outputs.tag }}
         run: |
           set -euo pipefail
-          if git rev-parse "$TAG" >/dev/null 2>&1; then
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag -a "$TAG" -m "MY PLUGIN $TAG"
-          git push origin "$TAG"
+          git checkout --detach "${{ steps.version.outputs.tag }}"
+          test "$(sed -n 's/^ \* Version: \(.*\)$/\1/p' my-plugin.php | head -n 1 | tr -d '\r')" = "${{ steps.version.outputs.version }}"
 
       - name: Set up PHP and Composer
+        if: steps.version.outputs.needs_assets == 'true'
         uses: shivammathur/setup-php@v2
         with:
           php-version: '7.4'
@@ -50,15 +73,19 @@ jobs:
           coverage: none
 
       - name: Install production dependencies
+        if: steps.version.outputs.needs_assets == 'true'
         run: composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction --no-progress
 
       - name: Verify EDD SDK
+        if: steps.version.outputs.needs_assets == 'true'
         run: test -f vendor/easy-digital-downloads/edd-sl-sdk/edd-sl-sdk.php
 
-      - name: Build WordPress distribution ZIP
+      - name: Build immutable WordPress distribution
+        if: steps.version.outputs.needs_assets == 'true'
         shell: bash
         env:
           ASSET: ${{ steps.version.outputs.asset }}
+          CHECKSUM: ${{ steps.version.outputs.checksum }}
         run: |
           set -euo pipefail
           PLUGIN_DIR="my-plugin"
@@ -68,21 +95,52 @@ jobs:
             --exclude '.git/' \
             --exclude '.github/' \
             --exclude 'build/' \
+            --exclude 'tests/' \
             --exclude '*.zip'
           cd build
           zip -qr "$ASSET" "$PLUGIN_DIR"
           test -s "$ASSET"
+          test "$(unzip -Z1 "$ASSET" | head -n 1)" = "$PLUGIN_DIR/"
+          sha256sum "$ASSET" > "$CHECKSUM"
 
-      - name: Create or update GitHub Release asset
+      - name: Create immutable tag after successful build validation
+        if: steps.version.outputs.needs_assets == 'true' && steps.version.outputs.tag_exists != 'true'
+        shell: bash
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "MY PLUGIN $TAG"
+          git push origin "$TAG"
+
+      - name: Create release or backfill missing assets
+        if: steps.version.outputs.needs_assets == 'true'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.version.outputs.tag }}
           ASSET: ${{ steps.version.outputs.asset }}
+          CHECKSUM: ${{ steps.version.outputs.checksum }}
         run: |
           set -euo pipefail
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" "build/$ASSET" --clobber
-          else
-            gh release create "$TAG" "build/$ASSET" --title "MY PLUGIN $TAG" --generate-notes
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" --title "MY PLUGIN $TAG" --generate-notes
           fi
+          assets="$(gh release view "$TAG" --json assets --jq '.assets[].name' 2>/dev/null || true)"
+          if ! printf '%s\n' "$assets" | grep -Fxq "$ASSET"; then gh release upload "$TAG" "build/$ASSET"; fi
+          if ! printf '%s\n' "$assets" | grep -Fxq "$CHECKSUM"; then gh release upload "$TAG" "build/$CHECKSUM"; fi
+          final_assets="$(gh release view "$TAG" --json assets --jq '.assets[].name')"
+          printf '%s\n' "$final_assets" | grep -Fxq "$ASSET"
+          printf '%s\n' "$final_assets" | grep -Fxq "$CHECKSUM"
+
+      - name: Upload verified install package artifact
+        if: steps.version.outputs.needs_assets == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: my-plugin-${{ steps.version.outputs.version }}-install-package
+          path: |
+            build/${{ steps.version.outputs.asset }}
+            build/${{ steps.version.outputs.checksum }}
+          if-no-files-found: error
