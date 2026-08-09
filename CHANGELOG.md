@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.2.0
+- NalApps Admin UI Kit을 `NalApps WordPress Plugin Standard Kit`으로 확장
+- 모든 플러그인 공통 운영 표준 문서 `docs/WORDPRESS-PLUGIN-STANDARD.md` 추가
+- capability + nonce 중심 보안 helper와 호환성/runtime status core template 추가
+- 코드 버전과 DB schema version을 분리하는 forward-only deterministic migration template 추가
+- 중복 예약 방지 및 비활성화 정리용 Cron manager template 추가
+- secret redaction 및 bounded retention을 적용한 opt-in logger template 추가
+- secret을 노출하지 않는 읽기 전용 System Status page template 추가
+- activation/deactivation/uninstall 데이터 보존 정책과 `uninstall.php.template` 추가
+- 표준 모듈 적용 예제 `wordpress/standard/bootstrap-example.php` 추가
+- Acceptance Checklist를 security/database/cron/logging/status/lifecycle/release까지 확장
+- 기존 Admin UI 및 EDD License & Hybrid Updates 모듈은 독립 계층으로 그대로 유지
+
 ## 2.1.0
 - 선택형 `EDD License & Hybrid Updates` 공통 모듈 추가
 - WordPress 플러그인 페이지 기본 업데이트 알림용 updater template 추가
