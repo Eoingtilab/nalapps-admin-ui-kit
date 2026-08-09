@@ -52,6 +52,7 @@ def base_profile() -> dict:
         "multisite": False,
         "telemetry": "off",
         "release_mode": "manual",
+        "uninstall_policy": "preserve",
         "requires_plugins": [],
     }
 
@@ -59,7 +60,6 @@ def base_profile() -> dict:
 def main() -> int:
     shutil.rmtree(TMP, ignore_errors=True)
 
-    # Equivalence/boundary/negative profile validation.
     valid = base_profile()
     validate_profile(write_profile("valid-free", valid))
 
@@ -80,7 +80,10 @@ def main() -> int:
     paid_missing["external_api"] = True
     expect_profile_fail("paid-missing-edd-metadata", paid_missing)
 
-    # EDD paid integration regression: SDK option names MUST use registered slug verbatim.
+    sensitive_backup = dict(valid)
+    sensitive_backup["data_contract"] = {"options": ["contract_fixture_api_key"]}
+    expect_profile_fail("sensitive-backup-option", sensitive_backup)
+
     paid = dict(valid)
     paid.update(
         {
@@ -110,7 +113,7 @@ def main() -> int:
     if not (target / "includes/class-update-manager.php").is_file():
         raise AssertionError("EDD paid scaffold omitted hybrid updater")
 
-    print("PASS quality_contract_test cases=6 edd_regression=1")
+    print("PASS quality_contract_test cases=7 edd_regression=1 privacy_regression=1")
     return 0
 
 
