@@ -37,6 +37,35 @@ def augment_manifest(target: Path) -> None:
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def normalize_maintenance_php(target: Path) -> None:
+    replacements = {
+        "array( 'timeout' => 15, 'sslverify' => true, 'redirection' => 3 )": (
+            "array(\n"
+            "\t\t\t\t'timeout'     => 15,\n"
+            "\t\t\t\t'sslverify'   => true,\n"
+            "\t\t\t\t'redirection' => 3,\n"
+            "\t\t\t)"
+        ),
+        "$wpdb = $GLOBALS['wpdb'];": "global $wpdb;",
+        "$tmp_name = (string) $_FILES['nalapps_backup']['tmp_name']; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized\n\t\t$size     =": (
+            "$tmp_name = (string) $_FILES['nalapps_backup']['tmp_name']; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized\n\n\t\t$size ="
+        ),
+        "$size = (int) $_FILES['nalapps_backup']['size'];\n\t\t$name     =": (
+            "$size = (int) $_FILES['nalapps_backup']['size'];\n\n\t\t$name ="
+        ),
+        "$raw = file_get_contents( $tmp_name ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents\n\t\tif": (
+            "$raw = file_get_contents( $tmp_name ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents\n\n\t\tif"
+        ),
+        "$payload = json_decode( $raw, true );\n\t\tif": "$payload = json_decode( $raw, true );\n\n\t\tif",
+        "$snapshot = self::create_snapshot( 'pre-import' );\n\t\tif": "$snapshot = self::create_snapshot( 'pre-import' );\n\n\t\tif",
+    }
+    for path in target.rglob("*.php"):
+        text = path.read_text(encoding="utf-8")
+        for old, new in replacements.items():
+            text = text.replace(old, new)
+        path.write_text(text, encoding="utf-8")
+
+
 def add_maintenance_runtime(target: Path, profile: dict) -> Path:
     write_file(target, "includes/class-data-portability.php", data_portability_class(profile))
     write_file(target, "includes/class-rollback-manager.php", rollback_manager_class(profile))
@@ -45,4 +74,5 @@ def add_maintenance_runtime(target: Path, profile: dict) -> Path:
     write_file(target, "uninstall.php", uninstall_php(profile))
     augment_main(target, profile)
     augment_manifest(target)
+    normalize_maintenance_php(target)
     return target
