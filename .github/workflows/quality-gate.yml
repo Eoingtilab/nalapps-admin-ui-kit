@@ -31,10 +31,13 @@ jobs:
       - name: Product scaffold matrix self-test
         run: python tools/self_test.py
 
+      - name: Boundary and negative contract tests
+        run: python tools/quality_contract_test.py
+
       - name: Public repository safety gate
         run: bash tools/public_repo_guard.sh
 
-      - name: Official WordPress Plugin Check on generated free scaffold
+      - name: Official WordPress Plugin Check - free fixture
         uses: wordpress/plugin-check-action@v1
         with:
           build-dir: './build/self-test/nalapps-free-basic'
@@ -42,6 +45,17 @@ jobs:
             security
             performance
             accessibility
+            general
+
+      - name: Official WordPress Plugin Check - EDD paid fixture
+        uses: wordpress/plugin-check-action@v1
+        with:
+          build-dir: './build/self-test/nalapps-paid-api'
+          categories: |
+            security
+            performance
+            accessibility
+            general
 
       - name: Set up PHP and Composer
         uses: shivammathur/setup-php@v2
@@ -62,6 +76,7 @@ jobs:
           set -euo pipefail
           find wordpress -name '*.php' ! -name '*.template.php' -print0 | xargs -0 -r -n1 php -l
           find build/self-test -name '*.php' -print0 | xargs -0 -r -n1 php -l
+          find build/quality-contract -name '*.php' -print0 | xargs -0 -r -n1 php -l
 
       - name: WordPress Coding Standards on generated scaffold
         run: vendor/bin/phpcs --standard=phpcs.xml.dist build/self-test
@@ -85,9 +100,12 @@ jobs:
           python-version: '3.12'
       - run: pip install -r requirements-dev.txt
       - run: python tools/self_test.py
+      - run: python tools/quality_contract_test.py
       - uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
           coverage: none
       - name: Lint generated PHP
-        run: find build/self-test -name '*.php' -print0 | xargs -0 -r -n1 php -l
+        run: |
+          find build/self-test -name '*.php' -print0 | xargs -0 -r -n1 php -l
+          find build/quality-contract -name '*.php' -print0 | xargs -0 -r -n1 php -l
