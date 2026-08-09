@@ -1,0 +1,20 @@
+{
+  "name": "eoingtilab/nalapps-wordpress-plugin-standard",
+  "description": "EOINGTI Lab NalApps WordPress plugin engineering standard and scaffolding toolkit.",
+  "type": "project",
+  "license": "GPL-2.0-or-later",
+  "require-dev": {
+    "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
+    "wp-coding-standards/wpcs": "^3.4"
+  },
+  "config": {
+    "allow-plugins": {
+      "dealerdirect/phpcodesniffer-composer-installer": true
+    },
+    "sort-packages": true
+  },
+  "scripts": {
+    "phpcs": "phpcs --standard=phpcs.xml.dist",
+    "audit": "composer audit --locked"
+  }
+}
