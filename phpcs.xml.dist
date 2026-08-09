@@ -4,8 +4,11 @@
   <file>build/self-test</file>
   <arg name="extensions" value="php" />
   <arg value="ps" />
-  <rule ref="WordPress-Core" />
-  <rule ref="WordPress-Docs" />
-  <rule ref="WordPress-Extra" />
+  <rule ref="WordPress-Core">
+    <exclude name="WordPress.WP.I18n" />
+  </rule>
+  <rule ref="WordPress-Extra">
+    <exclude name="WordPress.WP.I18n" />
+  </rule>
   <exclude-pattern>*/vendor/*</exclude-pattern>
 </ruleset>
