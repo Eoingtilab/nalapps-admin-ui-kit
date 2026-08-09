@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://eoingti.com/schemas/nalapps-plugin-profile.schema.json",
+  "title": "NalApps WordPress Plugin Profile",
+  "type": "object",
+  "required": ["plugin_name", "slug", "product_type", "frontend", "database", "cron", "rest_api", "external_api", "file_upload", "multisite"],
+  "properties": {
+    "plugin_name": {"type": "string", "minLength": 1},
+    "slug": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
+    "product_type": {"enum": ["free", "edd_paid", "private"]},
+    "frontend": {"type": "boolean"},
+    "database": {"type": "boolean"},
+    "cron": {"type": "boolean"},
+    "rest_api": {"type": "boolean"},
+    "external_api": {"type": "boolean"},
+    "file_upload": {"type": "boolean"},
+    "multisite": {"type": "boolean"},
+    "telemetry": {"enum": ["off", "opt_in"]},
+    "edd_download_id": {"type": ["integer", "null"], "minimum": 1},
+    "plugin_uri": {"type": ["string", "null"], "format": "uri"},
+    "support_uri": {"type": ["string", "null"], "format": "uri"},
+    "requires_plugins": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}
+  },
+  "additionalProperties": false
+}
