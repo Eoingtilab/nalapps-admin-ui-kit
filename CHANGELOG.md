@@ -1,13 +1,17 @@
 # Changelog
 
 ## 4.0.0
-- 문서형 표준을 `Plugin Profile → Scaffold → CI Enforcement → Immutable Release Gate` 자동화 체계로 승격
-- canonical `tools/scaffold_complete.py` 완성형 플러그인 generator 추가
+- 문서형 표준을 `Plugin Profile → Product Scaffold → CI Enforcement → Immutable Release Gate` 자동화 체계로 승격
+- canonical `tools/scaffold_product.py` 완성형 플러그인 generator 추가
+- 내부 scaffold 계층을 `scaffold_plugin.py` → `scaffold_complete.py` → `scaffold_product.py`로 분리
 - `profiles/plugin-profile.schema.json`을 plugin/release/EDD metadata까지 확장하고 unknown field fail-closed 적용
 - `edd_paid` profile에서 `edd_download_id`와 `edd_store_url`을 필수화
 - 안전한 `release_mode=manual|auto_on_version_bump` 계약 추가, 신규 scaffold 기본은 manual release
 - free / EDD paid + API / full-capability synthetic plugin 3종 self-test matrix 추가
-- profile별 external HTTP, DB migration, Cron, REST, file upload, EDD config skeleton 조건부 생성
+- 모든 생성형에 activation/deactivation lifecycle 및 secret-free System Status 연결
+- profile별 external HTTP, DB migration, Cron, REST, file upload 모듈 조건부 생성 및 bootstrap 연결
+- EDD paid profile에서 Software Licensing SDK runtime dependency, SDK registry/loader, license state adapter, WordPress 기본 updater, 내부 Updates 화면 자동 생성
+- EDD paid generated updater에 capability + nonce, bounded cache, HTTP/JSON validation, 활성 라이선스 기반 update install 적용
 - generated plugin에 Composer/WPCS 설정, GitHub quality workflow, immutable release workflow, release acceptance checklist 자동 생성
 - 표준 저장소에 실제 WordPress Coding Standards / PHPCS CI enforcement 추가
 - PHP 7.4 / 8.1 / 8.3 / 8.4 / 8.5 syntax matrix 추가
@@ -17,8 +21,9 @@
 - standard canonical file/cross-reference drift를 차단하는 `tools/standard_audit.py` 추가
 - 표준 VERSION 태그도 self-test/security/dependency/PHP/WPCS 검증 이후에만 생성하도록 강화
 - 기존 VERSION/tag는 immutable 처리하고 tag 이동/재생성 금지
+- generated product release 기본값을 manual로 설정해 신규 scaffold의 우발적 자동 배포 방지
 - generated product release도 기존 tag/release overwrite 금지, ZIP root 및 SHA-256 checksum 검증 후 신규 release 생성
-- production Composer dependency가 있으면 release 전 `--no-dev` install 후 `vendor/` 포함 가능하도록 build 계약 강화
+- production Composer dependency가 있으면 release 전 `composer install --no-dev` 후 `vendor/` 포함하도록 build 계약 강화
 - 자동 검증과 Human Final Gate를 분리한 v4 Acceptance Gate 확정
 - `docs/AUTOMATION-AND-SCAFFOLDING.md` 추가
 - free/EDD paid canonical example profile 추가
