@@ -167,9 +167,7 @@ final class Plugin {{
 \t\t$links[] = '<a href="{repo}" target="_blank" rel="noopener noreferrer">GitHub</a>';
 \t\t$links[] = '<a href="' . esc_url( admin_url( 'options-general.php?page={slug}-system-status' ) ) . '">System Status</a>';
 \t\treturn $links;
-\t}}{cron_method}
-
-}}
+\t}}{cron_method}}}
 '''
 
 
