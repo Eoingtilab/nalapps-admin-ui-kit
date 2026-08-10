@@ -58,6 +58,7 @@ jobs:
         run: |
           python tools/standard_audit.py
           python tools/self_test.py
+          python tools/migration_adapter_test.py
           python tools/quality_contract_test.py
           bash tools/public_repo_guard.sh
 
