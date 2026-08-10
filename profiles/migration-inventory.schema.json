@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Eoingtilab/nalapps-wordpress-plugin-standard/profiles/migration-inventory.schema.json",
+  "title": "NalApps Migration Inventory",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["standard_version", "repositories"],
+  "properties": {
+    "standard_version": {"type": "string", "minLength": 1},
+    "repositories": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/repository"}
+    }
+  },
+  "$defs": {
+    "repository": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository", "wordpress_plugin", "architecture", "role", "slug", "main_file", "current_version", "control_plane", "data_contract_reviewed", "credential_sensitive", "release_contract_known"],
+      "properties": {
+        "repository": {"type": "string", "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"},
+        "wordpress_plugin": {"type": "boolean"},
+        "architecture": {"enum": ["standalone", "commerce_family", "specialized"]},
+        "role": {"enum": ["plugin", "core", "addon", "server_bridge", "security", "credential_sensitive", "data_sensitive"]},
+        "slug": {"type": "string", "minLength": 1},
+        "main_file": {"type": "string", "minLength": 1},
+        "current_version": {"type": "string", "minLength": 1},
+        "control_plane": {"enum": ["none", "self", "commerce_core", "signed_custom", "server_side", "unknown"]},
+        "data_contract_reviewed": {"type": "boolean"},
+        "credential_sensitive": {"type": "boolean"},
+        "release_contract_known": {"type": "boolean"},
+        "edd_download_id": {"type": ["integer", "null"], "minimum": 1},
+        "edd_store_url": {"type": ["string", "null"], "format": "uri"},
+        "notes": {"type": "string"}
+      }
+    }
+  }
+}
