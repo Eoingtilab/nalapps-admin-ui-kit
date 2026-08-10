@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "golden_reference": {
+    "repository": "Eoingtilab/eo-korean-slide-popup",
+    "scope": "standalone commercial WordPress plugin UX and lifecycle"
+  },
+  "adapters": {
+    "standalone": {
+      "roles": ["plugin"],
+      "lifecycle_owner": "plugin",
+      "automatic_modules": ["admin_ui", "license", "update", "backup_restore", "system_info", "verified_rollback"],
+      "review_required_modules": [],
+      "forbidden": ["change_slug", "change_plugin_basename", "invent_data_contract"]
+    },
+    "commerce_family": {
+      "roles": ["core", "addon"],
+      "lifecycle_owner": "commerce_core",
+      "automatic_modules": ["admin_ui", "system_info"],
+      "review_required_modules": ["license", "update", "backup_restore", "verified_rollback"],
+      "forbidden": ["parallel_lifecycle_control_plane", "bypass_core_update_authority"]
+    },
+    "specialized": {
+      "roles": ["server_bridge", "security", "credential_sensitive", "data_sensitive"],
+      "lifecycle_owner": "existing_product_contract",
+      "automatic_modules": ["admin_ui", "system_info"],
+      "review_required_modules": ["license", "update", "backup_restore", "verified_rollback"],
+      "forbidden": ["replace_existing_signature_verification", "generic_secret_backup", "invent_server_authority"]
+    }
+  }
+}
