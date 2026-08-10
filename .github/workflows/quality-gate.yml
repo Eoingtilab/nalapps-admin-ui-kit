@@ -32,6 +32,9 @@ jobs:
       - name: Product scaffold matrix self-test
         run: python tools/self_test.py
 
+      - name: Migration adapter contract self-test
+        run: python tools/migration_adapter_test.py
+
       - name: Boundary and negative contract tests
         run: python tools/quality_contract_test.py
 
@@ -92,6 +95,7 @@ jobs:
           python-version: '3.12'
       - run: pip install -r requirements-dev.txt
       - run: python tools/self_test.py
+      - run: python tools/migration_adapter_test.py
       - run: python tools/quality_contract_test.py
       - uses: shivammathur/setup-php@v2
         with:
