@@ -3,7 +3,7 @@
   "$id": "https://eoingti.com/schemas/nalapps-plugin-profile.schema.json",
   "title": "NalApps WordPress Plugin Profile",
   "type": "object",
-  "required": ["plugin_name", "slug", "product_type", "license_mode", "license_required", "frontend", "database", "cron", "rest_api", "external_api", "file_upload", "multisite"],
+  "required": ["plugin_name", "slug", "product_type", "frontend", "database", "cron", "rest_api", "external_api", "file_upload", "multisite"],
   "properties": {
     "plugin_name": {"type": "string", "minLength": 1},
     "slug": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
@@ -24,13 +24,16 @@
     "telemetry": {"enum": ["off", "opt_in"]},
     "release_mode": {"enum": ["manual", "auto_on_version_bump"]},
     "uninstall_policy": {"enum": ["preserve", "delete_all"], "default": "preserve"},
+    "update_source": {"enum": ["github_releases", "edd"]},
+    "update_repository": {"type": ["string", "null"], "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"},
     "data_contract": {
       "type": "object",
       "properties": {
         "options": {"type": "array", "items": {"type": "string", "pattern": "^[A-Za-z0-9_.:-]+$"}, "uniqueItems": true},
         "site_options": {"type": "array", "items": {"type": "string", "pattern": "^[A-Za-z0-9_.:-]+$"}, "uniqueItems": true},
         "post_types": {"type": "array", "items": {"type": "string", "pattern": "^[a-z0-9_-]+$", "maxLength": 20}, "uniqueItems": true},
-        "custom_tables": {"type": "array", "items": {"type": "string", "pattern": "^[a-z0-9_]+$"}, "uniqueItems": true}
+        "custom_tables": {"type": "array", "items": {"type": "string", "pattern": "^[a-z0-9_]+$"}, "uniqueItems": true},
+        "secret_fields": {"type": "array", "items": {"type": "string", "pattern": "^[A-Za-z0-9_.:-]+$"}, "uniqueItems": true}
       },
       "additionalProperties": false
     },
@@ -46,10 +49,7 @@
   "allOf": [
     {
       "if": {"required": ["license_mode"], "properties": {"license_mode": {"enum": ["paid", "free_registered"]}}},
-      "then": {
-        "required": ["edd_download_id", "edd_store_url"],
-        "properties": {"license_required": {"const": true}}
-      }
+      "then": {"required": ["edd_download_id", "edd_store_url"], "properties": {"license_required": {"const": true}}}
     },
     {
       "if": {"required": ["license_mode"], "properties": {"license_mode": {"const": "free_download"}}},
@@ -60,8 +60,12 @@
       "then": {"properties": {"license_mode": {"const": "paid"}, "license_required": {"const": true}}}
     },
     {
-      "if": {"required": ["product_type"], "properties": {"product_type": {"const": "free"}}},
+      "if": {"required": ["product_type", "license_mode"], "properties": {"product_type": {"const": "free"}}},
       "then": {"properties": {"license_mode": {"enum": ["free_registered", "free_download"]}}}
+    },
+    {
+      "if": {"required": ["update_source"], "properties": {"update_source": {"const": "github_releases"}}},
+      "then": {"required": ["update_repository"]}
     }
   ],
   "additionalProperties": false
