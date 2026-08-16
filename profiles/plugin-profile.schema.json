@@ -12,6 +12,8 @@
     "requires_wp": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+(?:\\.[0-9]+)?$"},
     "requires_php": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+(?:\\.[0-9]+)?$"},
     "product_type": {"enum": ["free", "edd_paid", "private"]},
+    "license_mode": {"enum": ["paid", "free_registered", "free_download"]},
+    "license_required": {"type": "boolean"},
     "frontend": {"type": "boolean"},
     "database": {"type": "boolean"},
     "cron": {"type": "boolean"},
@@ -22,29 +24,16 @@
     "telemetry": {"enum": ["off", "opt_in"]},
     "release_mode": {"enum": ["manual", "auto_on_version_bump"]},
     "uninstall_policy": {"enum": ["preserve", "delete_all"], "default": "preserve"},
+    "update_source": {"enum": ["github_releases", "edd"]},
+    "update_repository": {"type": ["string", "null"], "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"},
     "data_contract": {
       "type": "object",
       "properties": {
-        "options": {
-          "type": "array",
-          "items": {"type": "string", "pattern": "^[A-Za-z0-9_.:-]+$"},
-          "uniqueItems": true
-        },
-        "site_options": {
-          "type": "array",
-          "items": {"type": "string", "pattern": "^[A-Za-z0-9_.:-]+$"},
-          "uniqueItems": true
-        },
-        "post_types": {
-          "type": "array",
-          "items": {"type": "string", "pattern": "^[a-z0-9_-]+$", "maxLength": 20},
-          "uniqueItems": true
-        },
-        "custom_tables": {
-          "type": "array",
-          "items": {"type": "string", "pattern": "^[a-z0-9_]+$"},
-          "uniqueItems": true
-        }
+        "options": {"type": "array", "items": {"type": "string", "pattern": "^[A-Za-z0-9_.:-]+$"}, "uniqueItems": true},
+        "site_options": {"type": "array", "items": {"type": "string", "pattern": "^[A-Za-z0-9_.:-]+$"}, "uniqueItems": true},
+        "post_types": {"type": "array", "items": {"type": "string", "pattern": "^[a-z0-9_-]+$", "maxLength": 20}, "uniqueItems": true},
+        "custom_tables": {"type": "array", "items": {"type": "string", "pattern": "^[a-z0-9_]+$"}, "uniqueItems": true},
+        "secret_fields": {"type": "array", "items": {"type": "string", "pattern": "^[A-Za-z0-9_.:-]+$"}, "uniqueItems": true}
       },
       "additionalProperties": false
     },
@@ -59,8 +48,24 @@
   },
   "allOf": [
     {
-      "if": {"properties": {"product_type": {"const": "edd_paid"}}},
-      "then": {"required": ["edd_download_id", "edd_store_url"]}
+      "if": {"required": ["license_mode"], "properties": {"license_mode": {"enum": ["paid", "free_registered"]}}},
+      "then": {"required": ["edd_download_id", "edd_store_url"], "properties": {"license_required": {"const": true}}}
+    },
+    {
+      "if": {"required": ["license_mode"], "properties": {"license_mode": {"const": "free_download"}}},
+      "then": {"properties": {"license_required": {"const": false}}}
+    },
+    {
+      "if": {"required": ["product_type"], "properties": {"product_type": {"const": "edd_paid"}}},
+      "then": {"properties": {"license_mode": {"const": "paid"}, "license_required": {"const": true}}}
+    },
+    {
+      "if": {"required": ["product_type", "license_mode"], "properties": {"product_type": {"const": "free"}}},
+      "then": {"properties": {"license_mode": {"enum": ["free_registered", "free_download"]}}}
+    },
+    {
+      "if": {"required": ["update_source"], "properties": {"update_source": {"const": "github_releases"}}},
+      "then": {"required": ["update_repository"]}
     }
   ],
   "additionalProperties": false

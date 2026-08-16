@@ -14,12 +14,14 @@ BUILD = ROOT / "build" / "self-test"
 PROFILES = ROOT / "build" / "self-test-profiles"
 
 CASES = {
-    "free-basic": {
-        "plugin_name": "NalApps Free Basic",
-        "slug": "nalapps-free-basic",
-        "description": "Synthetic free plugin used to validate the standard.",
+    "free-download": {
+        "plugin_name": "NalApps Free Download",
+        "slug": "nalapps-free-download",
+        "description": "Synthetic direct-download free plugin used to validate the always-active license contract.",
         "plugin_version": "0.1.0",
         "product_type": "free",
+        "license_mode": "free_download",
+        "license_required": False,
         "frontend": True,
         "database": False,
         "cron": False,
@@ -32,12 +34,37 @@ CASES = {
         "uninstall_policy": "preserve",
         "requires_plugins": [],
     },
+    "free-registered": {
+        "plugin_name": "NalApps Free Registered",
+        "slug": "nalapps-free-registered",
+        "description": "Synthetic free product that requires EDD license registration.",
+        "plugin_version": "0.1.0",
+        "product_type": "free",
+        "license_mode": "free_registered",
+        "license_required": True,
+        "frontend": True,
+        "database": False,
+        "cron": False,
+        "rest_api": False,
+        "external_api": True,
+        "file_upload": False,
+        "multisite": False,
+        "telemetry": "off",
+        "release_mode": "manual",
+        "uninstall_policy": "preserve",
+        "edd_download_id": 888888,
+        "edd_store_url": "https://example.com/",
+        "update_uri": "https://example.com/",
+        "requires_plugins": [],
+    },
     "paid-api": {
         "plugin_name": "NalApps Paid API",
         "slug": "nalapps-paid-api",
         "description": "Synthetic paid plugin used to validate EDD and remote-service selection.",
         "plugin_version": "0.1.0",
         "product_type": "edd_paid",
+        "license_mode": "paid",
+        "license_required": True,
         "frontend": True,
         "database": False,
         "cron": False,
@@ -56,7 +83,7 @@ CASES = {
     "full-capability": {
         "plugin_name": "NalApps Full Capability",
         "slug": "nalapps-full-capability",
-        "description": "Synthetic all-capability plugin used to validate conditional module generation.",
+        "description": "Synthetic all-capability private plugin used to validate conditional module generation and legacy license inference.",
         "plugin_version": "0.1.0",
         "product_type": "private",
         "frontend": True,
@@ -80,7 +107,13 @@ CASES = {
 }
 
 EXPECTED = {
-    "free-basic": [],
+    "free-download": ["includes/class-license.php"],
+    "free-registered": [
+        "includes/class-http-client.php",
+        "includes/class-edd-config.php",
+        "includes/class-license.php",
+        "includes/class-update-manager.php",
+    ],
     "paid-api": [
         "includes/class-http-client.php",
         "includes/class-edd-config.php",
@@ -93,6 +126,7 @@ EXPECTED = {
         "includes/class-cron-manager.php",
         "includes/class-rest-controller.php",
         "includes/class-upload-guard.php",
+        "includes/class-license.php",
     ],
 }
 
@@ -114,6 +148,42 @@ def assert_no_placeholders(root: Path) -> None:
             raise AssertionError(f"Unresolved placeholder in {path}")
 
 
+def assert_registered_license(target: Path, profile: dict, expected_label: str) -> None:
+    manifest = json.loads((target / "nalapps-standard-manifest.json").read_text(encoding="utf-8"))
+    for module in ("edd_license", "hybrid_updater", "product_native_license_ui"):
+        if module not in manifest["required_modules"]:
+            raise AssertionError(f"Registered license missing required module: {module}")
+    if profile["license_mode"] == "free_registered" and "free_registered_license" not in manifest["required_modules"]:
+        raise AssertionError("Registered-free profile missing free_registered_license module")
+    if "license_activation_ui" not in manifest["release_gates"]:
+        raise AssertionError("Registered license missing activation UI release gate")
+
+    composer = json.loads((target / "composer.json").read_text(encoding="utf-8"))
+    if composer.get("require", {}).get(EDD_SDK_PACKAGE) != EDD_SDK_VERSION:
+        raise AssertionError("Registered license scaffold did not include EDD SDK runtime dependency")
+
+    main_text = (target / f"{profile['slug']}.php").read_text(encoding="utf-8")
+    for token in ("edd_sl_sdk_registry", "Update_Manager", "class-edd-config.php"):
+        if token not in main_text:
+            raise AssertionError(f"Registered license runtime not wired: {token}")
+
+    license_text = (target / "includes/class-license.php").read_text(encoding="utf-8")
+    for token in (
+        "Serial key",
+        "activate_license",
+        "check_license",
+        "deactivate_license",
+        expected_label,
+    ):
+        if token not in license_text:
+            raise AssertionError(f"Registered license UI missing: {token}")
+
+    updater_text = (target / "includes/class-update-manager.php").read_text(encoding="utf-8")
+    for token in ("Update now", "install_update", "Plugin_Upgrader", "package_url"):
+        if token not in updater_text:
+            raise AssertionError(f"Registered executable updater contract missing: {token}")
+
+
 def main() -> int:
     shutil.rmtree(BUILD, ignore_errors=True)
     shutil.rmtree(PROFILES, ignore_errors=True)
@@ -121,10 +191,11 @@ def main() -> int:
     PROFILES.mkdir(parents=True)
     standard_version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 
-    for name, profile in CASES.items():
+    for name, source_profile in CASES.items():
         profile_path = PROFILES / f"{name}.json"
-        profile_path.write_text(json.dumps(profile, indent=2) + "\n", encoding="utf-8")
+        profile_path.write_text(json.dumps(source_profile, indent=2) + "\n", encoding="utf-8")
         target = create_project(profile_path, BUILD, clean=True)
+        profile = json.loads((target / "plugin-profile.json").read_text(encoding="utf-8"))
 
         required = [
             target / f"{profile['slug']}.php",
@@ -163,28 +234,34 @@ def main() -> int:
         for module in ("rollback", "data_portability", "safe_uninstall", "system_info", "refined_admin_ui"):
             if module not in manifest["required_modules"]:
                 raise AssertionError(f"Common maintenance module missing: {module}")
-        if profile["product_type"] == "free" and "edd_license" in manifest["required_modules"]:
-            raise AssertionError("Free profile incorrectly selected EDD module")
-        if profile["product_type"] == "edd_paid":
-            for module in ("hybrid_updater", "product_native_license_ui"):
+
+        if name == "full-capability":
+            if profile.get("license_mode") != "free_download" or profile.get("license_required") is not False:
+                raise AssertionError("Legacy profile did not infer free_download / license_required=false")
+
+        if profile["license_mode"] == "free_download":
+            for module in ("free_download_license_display", "free_download_license_always_active"):
                 if module not in manifest["required_modules"]:
-                    raise AssertionError(f"Paid profile missing required module: {module}")
-            if "license_activation_ui" not in manifest["release_gates"]:
-                raise AssertionError("Paid profile missing license activation UI release gate")
-            composer = json.loads((target / "composer.json").read_text(encoding="utf-8"))
-            if composer.get("require", {}).get(EDD_SDK_PACKAGE) != EDD_SDK_VERSION:
-                raise AssertionError("Paid scaffold did not include the EDD SDK runtime dependency")
-            main_text = (target / f"{profile['slug']}.php").read_text(encoding="utf-8")
-            if "edd_sl_sdk_registry" not in main_text or "Update_Manager" not in main_text or "new \\EOINGTI\\Plugins\\NalappsPaidApi\\License();" not in main_text:
-                raise AssertionError("Paid scaffold did not wire SDK, updater and product-native License runtime")
+                    raise AssertionError(f"Free-download profile missing required module: {module}")
+            for gate in ("free_download_license_ui", "free_download_license_always_active"):
+                if gate not in manifest["release_gates"]:
+                    raise AssertionError(f"Free-download profile missing release gate: {gate}")
             license_text = (target / "includes/class-license.php").read_text(encoding="utf-8")
-            for token in ("Serial key", "activate_license", "check_license", "deactivate_license", "admin_post_nalapps_paid_api_activate_license"):
+            for token in ("return 'free';", "return true;", "라이선스: 무료", "현재 상태: 활성화"):
                 if token not in license_text:
-                    raise AssertionError(f"Paid product-native license UI missing: {token}")
-            updater_text = (target / "includes/class-update-manager.php").read_text(encoding="utf-8")
-            for token in ("Update now", "install_update", "Plugin_Upgrader", "package_url"):
-                if token not in updater_text:
-                    raise AssertionError(f"Paid executable updater contract missing: {token}")
+                    raise AssertionError(f"Free-download license runtime missing: {token}")
+            for forbidden in ("activate_license", "deactivate_license", "license_key", "Serial key"):
+                if forbidden in license_text:
+                    raise AssertionError(f"Free-download runtime must not include registration flow: {forbidden}")
+            main_text = (target / f"{profile['slug']}.php").read_text(encoding="utf-8")
+            if "canonical free-download license runtime" not in main_text:
+                raise AssertionError("Free-download license runtime was not wired into the generated plugin")
+
+        if profile["license_mode"] == "free_registered":
+            assert_registered_license(target, profile, "무료 (라이선스 등록)")
+
+        if profile["license_mode"] == "paid":
+            assert_registered_license(target, profile, "유료 (Paid)")
 
         main_text = (target / f"{profile['slug']}.php").read_text(encoding="utf-8")
         for class_name in ("Data_Portability", "Rollback_Manager", "System_Info", "Maintenance_Page"):
@@ -238,7 +315,10 @@ def main() -> int:
             raise AssertionError("EOINGTI Lab CODEOWNERS policy is missing")
         assert_no_placeholders(target)
 
-    print(f"PASS self_test cases={len(CASES)} standard={standard_version} maintenance=6 paid_license_ui=1")
+    print(
+        f"PASS self_test cases={len(CASES)} standard={standard_version} "
+        "maintenance=6 license_modes=paid,free_registered,free_download"
+    )
     return 0
 
 

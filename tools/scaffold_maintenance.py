@@ -22,7 +22,7 @@ def augment_main(target: Path, profile: dict) -> None:
     marker = "// NalApps common maintenance runtime."
     if marker in text:
         return
-    license_line = f"new \\EOINGTI\\Plugins\\{ns}\\License();\n" if profile.get("product_type") == "edd_paid" else ""
+    license_line = f"new \\EOINGTI\\Plugins\\{ns}\\License();\n" if profile.get("license_required") else ""
     block = f'''\n\n{marker}\nrequire_once {prefix}_PATH . 'includes/class-data-portability.php';\nrequire_once {prefix}_PATH . 'includes/class-rollback-manager.php';\nrequire_once {prefix}_PATH . 'includes/class-system-info.php';\nrequire_once {prefix}_PATH . 'includes/class-maintenance-page.php';\n{license_line}new \\EOINGTI\\Plugins\\{ns}\\Data_Portability();\nnew \\EOINGTI\\Plugins\\{ns}\\Rollback_Manager();\nnew \\EOINGTI\\Plugins\\{ns}\\System_Info();\nnew \\EOINGTI\\Plugins\\{ns}\\Maintenance_Page();\n'''
     path.write_text(text + block, encoding="utf-8")
 
@@ -32,7 +32,7 @@ def augment_manifest(target: Path, profile: dict) -> None:
     data = json.loads(path.read_text(encoding="utf-8"))
     modules = ["rollback", "data_portability", "safe_uninstall", "system_info", "refined_admin_ui"]
     gates = ["rollback_backup_contract", "data_backup_import_export", "uninstall_delete_gate", "system_info_redaction", "admin_ui_contract"]
-    if profile.get("product_type") == "edd_paid":
+    if profile.get("license_required"):
         modules.append("product_native_license_ui")
         gates.append("license_activation_ui")
     for module in modules:
@@ -78,7 +78,7 @@ def normalize_maintenance_php(target: Path) -> None:
 
 
 def add_maintenance_runtime(target: Path, profile: dict) -> Path:
-    if profile.get("product_type") == "edd_paid":
+    if profile.get("license_required"):
         write_file(target, "includes/class-license.php", license_management_class(profile))
     write_file(target, "includes/class-data-portability.php", data_portability_class(profile))
     write_file(target, "includes/class-rollback-manager.php", rollback_manager_class(profile))

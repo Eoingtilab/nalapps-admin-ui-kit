@@ -5,9 +5,11 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+from scaffold_free_license import add_free_license_runtime
 from scaffold_maintenance import add_maintenance_runtime
 from scaffold_plugin import ROOT, write_file
 from scaffold_product import product_scaffold
+from scaffold_registered_license import add_registered_license_runtime
 from validate_profile import validate_profile
 
 
@@ -159,9 +161,18 @@ def tests_contract(profile: dict) -> str:
         conditional.append("- Upload capability, extension/MIME, size, nonce and rejected-file tests.")
     if profile.get("external_api"):
         conditional.append("- Remote timeout/error/cache/redaction tests without live production credentials.")
-    if profile.get("product_type") == "edd_paid":
-        conditional.append("- EDD license state fixtures plus WordPress Plugins/internal updater detection tests.")
+
+    license_mode = profile.get("license_mode")
+    if license_mode == "free_download":
+        conditional.append("- License UI must show 무료/Free and 활성화/Active without a serial-key or activation flow.")
+        conditional.append("- License runtime must always report is_valid()=true and must not depend on a remote licensing server.")
+    elif license_mode == "free_registered":
+        conditional.append("- Product price/access tier is free, but license-key registration, activation, validation and deactivation must work.")
+        conditional.append("- Registered-free entitlement and update access must be validated through the configured EDD licensing endpoint.")
+    elif license_mode == "paid":
+        conditional.append("- Paid EDD license state fixtures plus WordPress Plugins/internal updater detection tests.")
         conditional.append("- Human E2E for real activation/deactivation and version upgrade before release.")
+
     extra = "\n".join(conditional) if conditional else "- No additional profile-specific suite is required until product behavior is added."
     return f'''# Product Test Contract
 
@@ -219,6 +230,8 @@ def enrich_project(target: Path, profile: dict) -> None:
 def create_project(profile_path: Path, output: Path, clean: bool = False) -> Path:
     profile = validate_profile(profile_path)
     target = product_scaffold(profile_path, output, clean=clean)
+    add_registered_license_runtime(target, profile)
+    add_free_license_runtime(target, profile)
     add_maintenance_runtime(target, profile)
     enrich_project(target, profile)
     return target
@@ -232,7 +245,10 @@ def command_create(args: argparse.Namespace) -> int:
 
 def command_validate(args: argparse.Namespace) -> int:
     profile = validate_profile(args.profile)
-    print(f"PASS nalapps_validate={profile['slug']}")
+    print(
+        f"PASS nalapps_validate={profile['slug']} "
+        f"license_mode={profile['license_mode']} license_required={str(profile['license_required']).lower()}"
+    )
     return 0
 
 

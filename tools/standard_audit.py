@@ -15,9 +15,10 @@ REQUIRED_FILES = [
     "docs/MASTER-STANDARD.md", "docs/WORDPRESS-PLUGIN-STANDARD.md",
     "docs/ENGINEERING-CONTRACTS-V3.md", "docs/AUTOMATION-AND-SCAFFOLDING.md",
     "docs/ROLLBACK-BACKUP-DATA-LIFECYCLE.md", "docs/PUBLIC-REPOSITORY-SAFETY.md",
-    "docs/EDD-LICENSE-AND-UPDATES.md", "docs/ACCEPTANCE-CHECKLIST.md",
+    "docs/EDD-LICENSE-AND-UPDATES.md", "docs/FREE-LICENSE-CONTRACT.md", "docs/ACCEPTANCE-CHECKLIST.md",
     "docs/ISO-29119-25010-TEST-PLAN.md", "tools/validate_profile.py",
     "tools/scaffold_plugin.py", "tools/scaffold_complete.py", "tools/scaffold_product.py",
+    "tools/scaffold_free_license.py", "tools/scaffold_registered_license.py",
     "tools/scaffold_maintenance.py", "tools/maintenance_data.py", "tools/maintenance_license.py",
     "tools/maintenance_rollback.py", "tools/maintenance_system.py", "tools/maintenance_uninstall.py",
     "tools/nalapps_plugin.py", "tools/self_test.py", "tools/quality_contract_test.py", "tools/standard_audit.py",
@@ -74,11 +75,45 @@ def main() -> int:
     schema = json.loads((ROOT / "profiles/plugin-profile.schema.json").read_text(encoding="utf-8"))
     if schema.get("additionalProperties") is not False:
         fail("plugin profile schema must fail closed on unknown fields")
-    for key in ("release_mode", "uninstall_policy", "data_contract"):
+    for key in ("release_mode", "uninstall_policy", "data_contract", "license_mode", "license_required", "update_source", "update_repository"):
         if key not in schema.get("properties", {}):
             fail(f"plugin profile schema must define {key}")
+    license_modes = schema.get("properties", {}).get("license_mode", {}).get("enum", [])
+    if set(license_modes) != {"paid", "free_registered", "free_download"}:
+        fail("plugin profile schema must define exactly three canonical license modes")
     if not any(item.get("if", {}).get("properties", {}).get("product_type", {}).get("const") == "edd_paid" for item in schema.get("allOf", [])):
-        fail("plugin profile schema must require EDD fields for paid products")
+        fail("plugin profile schema must constrain EDD paid products")
+
+    license_doc = (ROOT / "docs/FREE-LICENSE-CONTRACT.md").read_text(encoding="utf-8")
+    require_tokens(
+        license_doc,
+        [
+            "paid", "free_registered", "free_download", "무료 (라이선스 등록)",
+            "활성화 (Active)", "Backward compatibility", "update_source: github_releases",
+        ],
+        "license modes contract",
+    )
+
+    free_license_scaffold = (ROOT / "tools/scaffold_free_license.py").read_text(encoding="utf-8")
+    require_tokens(
+        free_license_scaffold,
+        ["free_download", "return 'free';", "return true;", "라이선스: 무료 (Free)", "현재 상태: 활성화 (Active)"],
+        "direct-download free license scaffold",
+    )
+
+    registered_scaffold = (ROOT / "tools/scaffold_registered_license.py").read_text(encoding="utf-8")
+    require_tokens(
+        registered_scaffold,
+        ["free_registered", "edd_download_id", "class-edd-config.php", "class-license.php", "class-update-manager.php"],
+        "registered-free license scaffold",
+    )
+
+    validator = (ROOT / "tools/validate_profile.py").read_text(encoding="utf-8")
+    require_tokens(
+        validator,
+        ["LICENSE_MODES", "free_registered", "free_download", "external_api=true", "update_source=edd"],
+        "license profile validator",
+    )
 
     product_scaffold = (ROOT / "tools/scaffold_product.py").read_text(encoding="utf-8")
     require_tokens(
@@ -105,7 +140,7 @@ def main() -> int:
             "delete_all", "class-data-portability.php", "class-rollback-manager.php",
             "nalapps-switch", "nalapps-admin-ui.css", "refined_admin_ui",
             "product_native_license_ui", "license_activation_ui", "activate_license",
-            "check_license", "deactivate_license", "Serial key",
+            "check_license", "deactivate_license", "Serial key", "무료 (라이선스 등록)", "유료 (Paid)",
             "list_release_versions", "release_rollback", "RELEASES_API",
             "browser_download_url", "prerelease", "Rollback to selected version",
             "Local safety backups",
@@ -181,14 +216,21 @@ def main() -> int:
     contract_test = (ROOT / "tools/quality_contract_test.py").read_text(encoding="utf-8")
     require_tokens(
         contract_test,
-        ["hyphenated-paid-fixture_license_key", "telemetry-without-external-api", "paid-missing-edd-metadata", "sensitive-backup-option"],
+        [
+            "hyphenated-paid-fixture_license_key", "telemetry-without-external-api",
+            "paid-missing-edd-metadata", "free-registered-missing-edd-metadata",
+            "sensitive-backup-option", "legacy_inference=1",
+        ],
         "quality contract regression",
     )
 
     cli = (ROOT / "tools/nalapps_plugin.py").read_text(encoding="utf-8")
     require_tokens(
         cli,
-        ["wordpress/plugin-check-action@v1", "dependabot.yml", "CODEOWNERS", "ISSUE_TEMPLATE", "tests/README.md", "add_maintenance_runtime"],
+        [
+            "wordpress/plugin-check-action@v1", "dependabot.yml", "CODEOWNERS", "ISSUE_TEMPLATE",
+            "tests/README.md", "add_maintenance_runtime", "add_free_license_runtime", "add_registered_license_runtime",
+        ],
         "canonical CLI governance",
     )
 
@@ -198,13 +240,16 @@ def main() -> int:
     quality = (ROOT / ".github/workflows/quality-gate.yml").read_text(encoding="utf-8")
     require_tokens(
         quality,
-        ["quality_contract_test.py", "wordpress/plugin-check-action@v1", "cache-dependency-path: requirements-dev.txt", "nalapps-paid-api"],
+        [
+            "quality_contract_test.py", "wordpress/plugin-check-action@v1",
+            "cache-dependency-path: requirements-dev.txt", "nalapps-paid-api", "nalapps-free-download",
+        ],
         "primary quality gate",
     )
 
     free_plugin_check = (ROOT / ".github/workflows/plugin-check-free.yml").read_text(encoding="utf-8")
-    if "nalapps-free-basic" not in free_plugin_check or "wordpress/plugin-check-action@v1" not in free_plugin_check:
-        fail("isolated free-plugin official Plugin Check is missing")
+    if "nalapps-free-download" not in free_plugin_check or "wordpress/plugin-check-action@v1" not in free_plugin_check:
+        fail("isolated direct-download free-plugin official Plugin Check is missing")
 
     tag_workflow = (ROOT / ".github/workflows/tag-version.yml").read_text(encoding="utf-8")
     require_tokens(
