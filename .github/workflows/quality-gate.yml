@@ -77,10 +77,10 @@ jobs:
         run: vendor/bin/phpcs --standard=phpcs.xml.dist build/self-test
 
       - name: Release provenance generator smoke test
-        run: python tools/release_manifest.py build/self-test/nalapps-free-basic --output build/release-provenance.json --version 0.1.0 --commit "${GITHUB_SHA}"
+        run: python tools/release_manifest.py build/self-test/nalapps-free-download --output build/release-provenance.json --version 0.1.0 --commit "${GITHUB_SHA}"
 
       - name: Verify deterministic provenance shape
-        run: python -c "import json; d=json.load(open('build/release-provenance.json')); assert d['file_count'] > 0 and d['package_root'] == 'nalapps-free-basic'"
+        run: python -c "import json; d=json.load(open('build/release-provenance.json')); assert d['file_count'] > 0 and d['package_root'] == 'nalapps-free-download'"
 
   php-compatibility-matrix:
     runs-on: ubuntu-latest
