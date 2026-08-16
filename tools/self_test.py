@@ -20,6 +20,7 @@ CASES = {
         "description": "Synthetic free plugin used to validate the standard.",
         "plugin_version": "0.1.0",
         "product_type": "free",
+        "license_required": False,
         "frontend": True,
         "database": False,
         "cron": False,
@@ -80,7 +81,9 @@ CASES = {
 }
 
 EXPECTED = {
-    "free-basic": [],
+    "free-basic": [
+        "includes/class-license.php",
+    ],
     "paid-api": [
         "includes/class-http-client.php",
         "includes/class-edd-config.php",
@@ -163,8 +166,25 @@ def main() -> int:
         for module in ("rollback", "data_portability", "safe_uninstall", "system_info", "refined_admin_ui"):
             if module not in manifest["required_modules"]:
                 raise AssertionError(f"Common maintenance module missing: {module}")
-        if profile["product_type"] == "free" and "edd_license" in manifest["required_modules"]:
-            raise AssertionError("Free profile incorrectly selected EDD module")
+        if profile["product_type"] == "free":
+            if "edd_license" in manifest["required_modules"]:
+                raise AssertionError("Free profile incorrectly selected EDD module")
+            for module in ("free_license_display", "free_license_always_active"):
+                if module not in manifest["required_modules"]:
+                    raise AssertionError(f"Free profile missing required module: {module}")
+            for gate in ("free_license_ui", "free_license_always_active"):
+                if gate not in manifest["release_gates"]:
+                    raise AssertionError(f"Free profile missing release gate: {gate}")
+            free_license_text = (target / "includes/class-license.php").read_text(encoding="utf-8")
+            for token in ("return 'free';", "return true;", "라이선스: 무료", "현재 상태: 활성"):
+                if token not in free_license_text:
+                    raise AssertionError(f"Free license runtime missing: {token}")
+            for forbidden in ("activate_license", "deactivate_license", "license_key", "Serial key"):
+                if forbidden in free_license_text:
+                    raise AssertionError(f"Free license runtime must not include activation flow: {forbidden}")
+            main_text = (target / f"{profile['slug']}.php").read_text(encoding="utf-8")
+            if "canonical free-license runtime" not in main_text or "new \\EOINGTI\\Plugins\\NalappsFreeBasic\\License();" not in main_text:
+                raise AssertionError("Free license runtime was not wired into the generated plugin")
         if profile["product_type"] == "edd_paid":
             for module in ("hybrid_updater", "product_native_license_ui"):
                 if module not in manifest["required_modules"]:
@@ -238,7 +258,7 @@ def main() -> int:
             raise AssertionError("EOINGTI Lab CODEOWNERS policy is missing")
         assert_no_placeholders(target)
 
-    print(f"PASS self_test cases={len(CASES)} standard={standard_version} maintenance=6 paid_license_ui=1")
+    print(f"PASS self_test cases={len(CASES)} standard={standard_version} maintenance=6 paid_license_ui=1 free_license_ui=1")
     return 0
 
 
