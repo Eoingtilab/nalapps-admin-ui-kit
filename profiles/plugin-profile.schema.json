@@ -12,6 +12,7 @@
     "requires_wp": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+(?:\\.[0-9]+)?$"},
     "requires_php": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+(?:\\.[0-9]+)?$"},
     "product_type": {"enum": ["free", "edd_paid", "private"]},
+    "license_required": {"type": "boolean"},
     "frontend": {"type": "boolean"},
     "database": {"type": "boolean"},
     "cron": {"type": "boolean"},
@@ -59,8 +60,15 @@
   },
   "allOf": [
     {
-      "if": {"properties": {"product_type": {"const": "edd_paid"}}},
+      "if": {"required": ["product_type"], "properties": {"product_type": {"const": "edd_paid"}}},
       "then": {"required": ["edd_download_id", "edd_store_url"]}
+    },
+    {
+      "if": {"required": ["product_type"], "properties": {"product_type": {"const": "free"}}},
+      "then": {
+        "required": ["license_required"],
+        "properties": {"license_required": {"const": false}}
+      }
     }
   ],
   "additionalProperties": false
