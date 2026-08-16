@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Add the canonical always-active free-license runtime to free NalApps plugins."""
+"""Add the canonical always-active license runtime to direct-download free NalApps plugins."""
 from __future__ import annotations
 
 import json
@@ -14,10 +14,10 @@ def free_license_class(profile: dict) -> str:
     page_slug = f"{slug}-license"
     return f'''<?php
 /**
- * Canonical free-license status adapter.
+ * Canonical direct-download free-license status adapter.
  *
- * Free products never require a serial key or remote activation.
- * Their license state is always active while the plugin is installed.
+ * This license mode never requires a serial key or remote activation.
+ * Its runtime state is always active while the plugin is installed.
  *
  * @package {ns}
  */
@@ -61,8 +61,8 @@ final class License {{
 \t\t}}
 \t\techo '<div class="wrap"><h1>' . esc_html( '{profile["plugin_name"]} License' ) . '</h1>';
 \t\techo '<p><strong>' . esc_html( '라이선스: 무료 (Free)' ) . '</strong></p>';
-\t\techo '<p><strong>' . esc_html( '현재 상태: 활성 (Active)' ) . '</strong></p>';
-\t\techo '<p>' . esc_html( '무료 제품은 시리얼 키 입력, 원격 활성화 또는 비활성화 절차가 필요하지 않습니다.' ) . '</p>';
+\t\techo '<p><strong>' . esc_html( '현재 상태: 활성화 (Active)' ) . '</strong></p>';
+\t\techo '<p>' . esc_html( '자유 다운로드형 무료 제품은 시리얼 키 등록이나 원격 활성화 절차 없이 사용할 수 있습니다.' ) . '</p>';
 \t\techo '</div>';
 \t}}
 }}
@@ -75,7 +75,7 @@ def augment_main(target: Path, profile: dict) -> None:
     ns = namespace_suffix(slug)
     path = target / f"{slug}.php"
     text = path.read_text(encoding="utf-8")
-    marker = "// NalApps canonical free-license runtime."
+    marker = "// NalApps canonical free-download license runtime."
     if marker in text:
         return
     block = f'''\n\n{marker}\nrequire_once {prefix}_PATH . 'includes/class-license.php';\nnew \\EOINGTI\\Plugins\\{ns}\\License();\n'''
@@ -87,20 +87,20 @@ def augment_manifest(target: Path) -> None:
     data = json.loads(path.read_text(encoding="utf-8"))
     modules = data.setdefault("required_modules", [])
     gates = data.setdefault("release_gates", [])
-    for module in ("free_license_display", "free_license_always_active"):
+    for module in ("free_download_license_display", "free_download_license_always_active"):
         if module not in modules:
             modules.append(module)
-    for gate in ("free_license_ui", "free_license_always_active"):
+    for gate in ("free_download_license_ui", "free_download_license_always_active"):
         if gate not in gates:
             gates.append(gate)
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
 def add_free_license_runtime(target: Path, profile: dict) -> None:
-    if profile.get("product_type") != "free":
+    if profile.get("license_mode") != "free_download":
         return
     if profile.get("license_required") is not False:
-        raise ValueError("Free products must declare license_required=false")
+        raise ValueError("free_download must declare license_required=false")
     write_file(target, "includes/class-license.php", free_license_class(profile))
     augment_main(target, profile)
     augment_manifest(target)
