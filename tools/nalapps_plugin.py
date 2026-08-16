@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+from scaffold_free_license import add_free_license_runtime
 from scaffold_maintenance import add_maintenance_runtime
 from scaffold_plugin import ROOT, write_file
 from scaffold_product import product_scaffold
@@ -159,6 +160,9 @@ def tests_contract(profile: dict) -> str:
         conditional.append("- Upload capability, extension/MIME, size, nonce and rejected-file tests.")
     if profile.get("external_api"):
         conditional.append("- Remote timeout/error/cache/redaction tests without live production credentials.")
+    if profile.get("product_type") == "free":
+        conditional.append("- Free-license UI must show Free/무료 and Active/활성 without a serial-key or activation flow.")
+        conditional.append("- Free-license runtime must always report is_valid()=true and must not depend on a remote licensing server.")
     if profile.get("product_type") == "edd_paid":
         conditional.append("- EDD license state fixtures plus WordPress Plugins/internal updater detection tests.")
         conditional.append("- Human E2E for real activation/deactivation and version upgrade before release.")
@@ -219,6 +223,7 @@ def enrich_project(target: Path, profile: dict) -> None:
 def create_project(profile_path: Path, output: Path, clean: bool = False) -> Path:
     profile = validate_profile(profile_path)
     target = product_scaffold(profile_path, output, clean=clean)
+    add_free_license_runtime(target, profile)
     add_maintenance_runtime(target, profile)
     enrich_project(target, profile)
     return target
