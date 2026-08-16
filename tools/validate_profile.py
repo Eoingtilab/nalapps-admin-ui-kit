@@ -63,20 +63,22 @@ def normalize_license_contract(profile: dict) -> dict:
         raise SystemExit(2)
 
     if required:
+        if not profile.get("external_api"):
+            print(f"PROFILE_ERROR {mode} requires external_api=true", file=sys.stderr)
+            raise SystemExit(2)
         if not profile.get("edd_download_id") or not profile.get("edd_store_url"):
             print(
                 f"PROFILE_ERROR {mode} requires edd_download_id and edd_store_url",
                 file=sys.stderr,
             )
             raise SystemExit(2)
-        profile.setdefault("update_source", "edd")
+        if profile.get("update_source") not in (None, "edd"):
+            print(f"PROFILE_ERROR {mode} currently requires update_source=edd", file=sys.stderr)
+            raise SystemExit(2)
+        profile["update_source"] = "edd"
     elif mode == "free_download":
-        profile.setdefault("update_source", "github_releases" if profile.get("update_repository") else "github_releases")
-
-    if profile.get("update_source") == "github_releases" and not profile.get("update_repository"):
-        # Keep legacy profiles valid when they have not opted into an updater yet.
-        # Once update_repository is supplied, scaffold/update tooling can enforce the installable asset contract.
-        profile.pop("update_source", None)
+        if profile.get("update_repository") and not profile.get("update_source"):
+            profile["update_source"] = "github_releases"
 
     return profile
 
