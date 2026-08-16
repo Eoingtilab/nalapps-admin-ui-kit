@@ -10,6 +10,13 @@ def license_management_class(profile: dict) -> str:
     slug = profile["slug"]
     action = slug.replace("-", "_")
     page_slug = f"{slug}-license"
+    license_mode = profile.get("license_mode", "paid")
+    license_label = "무료 (라이선스 등록)" if license_mode == "free_registered" else "유료 (Paid)"
+    license_help = (
+        "무료 라이선스 등록형 제품입니다. 발급된 라이선스 키를 이 사이트에 등록하고 활성화해야 합니다."
+        if license_mode == "free_registered"
+        else "유료 라이선스 제품입니다. 구매 후 발급된 시리얼 키를 이 사이트에 등록하고 활성화해야 합니다."
+    )
     return f'''<?php
 /**
  * Product-native EDD Software Licensing management.
@@ -68,8 +75,9 @@ final class License {{
 \t\t\twp_die( esc_html( 'Insufficient permissions.' ) );
 \t\t}}
 \t\techo '<div class="wrap nalapps-maintenance-wrap"><div class="nalapps-panel">';
-\t\techo '<div class="nalapps-panel-heading"><div><h2>License</h2><p>Enter and activate the serial key for this site.</p></div></div>';
-\t\techo '<p><strong>Status:</strong> ' . esc_html( self::status() ) . '</p>';
+\t\techo '<div class="nalapps-panel-heading"><div><h2>License</h2><p>' . esc_html( '{license_help}' ) . '</p></div></div>';
+\t\techo '<p><strong>라이선스:</strong> ' . esc_html( '{license_label}' ) . '</p>';
+\t\techo '<p><strong>현재 상태:</strong> ' . esc_html( self::status() ) . '</p>';
 \t\techo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
 \t\techo '<input type="hidden" name="action" value="{action}_activate_license">';
 \t\twp_nonce_field( '{action}_activate_license' );
