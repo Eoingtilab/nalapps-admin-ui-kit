@@ -3,7 +3,7 @@
   "$id": "https://eoingti.com/schemas/nalapps-plugin-profile.schema.json",
   "title": "NalApps WordPress Plugin Profile",
   "type": "object",
-  "required": ["plugin_name", "slug", "product_type", "frontend", "database", "cron", "rest_api", "external_api", "file_upload", "multisite"],
+  "required": ["plugin_name", "slug", "product_type", "license_mode", "license_required", "frontend", "database", "cron", "rest_api", "external_api", "file_upload", "multisite"],
   "properties": {
     "plugin_name": {"type": "string", "minLength": 1},
     "slug": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
@@ -12,6 +12,7 @@
     "requires_wp": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+(?:\\.[0-9]+)?$"},
     "requires_php": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+(?:\\.[0-9]+)?$"},
     "product_type": {"enum": ["free", "edd_paid", "private"]},
+    "license_mode": {"enum": ["paid", "free_registered", "free_download"]},
     "license_required": {"type": "boolean"},
     "frontend": {"type": "boolean"},
     "database": {"type": "boolean"},
@@ -26,26 +27,10 @@
     "data_contract": {
       "type": "object",
       "properties": {
-        "options": {
-          "type": "array",
-          "items": {"type": "string", "pattern": "^[A-Za-z0-9_.:-]+$"},
-          "uniqueItems": true
-        },
-        "site_options": {
-          "type": "array",
-          "items": {"type": "string", "pattern": "^[A-Za-z0-9_.:-]+$"},
-          "uniqueItems": true
-        },
-        "post_types": {
-          "type": "array",
-          "items": {"type": "string", "pattern": "^[a-z0-9_-]+$", "maxLength": 20},
-          "uniqueItems": true
-        },
-        "custom_tables": {
-          "type": "array",
-          "items": {"type": "string", "pattern": "^[a-z0-9_]+$"},
-          "uniqueItems": true
-        }
+        "options": {"type": "array", "items": {"type": "string", "pattern": "^[A-Za-z0-9_.:-]+$"}, "uniqueItems": true},
+        "site_options": {"type": "array", "items": {"type": "string", "pattern": "^[A-Za-z0-9_.:-]+$"}, "uniqueItems": true},
+        "post_types": {"type": "array", "items": {"type": "string", "pattern": "^[a-z0-9_-]+$", "maxLength": 20}, "uniqueItems": true},
+        "custom_tables": {"type": "array", "items": {"type": "string", "pattern": "^[a-z0-9_]+$"}, "uniqueItems": true}
       },
       "additionalProperties": false
     },
@@ -60,15 +45,23 @@
   },
   "allOf": [
     {
+      "if": {"required": ["license_mode"], "properties": {"license_mode": {"enum": ["paid", "free_registered"]}}},
+      "then": {
+        "required": ["edd_download_id", "edd_store_url"],
+        "properties": {"license_required": {"const": true}}
+      }
+    },
+    {
+      "if": {"required": ["license_mode"], "properties": {"license_mode": {"const": "free_download"}}},
+      "then": {"properties": {"license_required": {"const": false}}}
+    },
+    {
       "if": {"required": ["product_type"], "properties": {"product_type": {"const": "edd_paid"}}},
-      "then": {"required": ["edd_download_id", "edd_store_url"]}
+      "then": {"properties": {"license_mode": {"const": "paid"}, "license_required": {"const": true}}}
     },
     {
       "if": {"required": ["product_type"], "properties": {"product_type": {"const": "free"}}},
-      "then": {
-        "required": ["license_required"],
-        "properties": {"license_required": {"const": false}}
-      }
+      "then": {"properties": {"license_mode": {"enum": ["free_registered", "free_download"]}}}
     }
   ],
   "additionalProperties": false
