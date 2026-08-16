@@ -20,11 +20,11 @@ jobs:
       - run: pip install -r requirements-dev.txt
       - name: Generate representative free plugin
         run: python tools/self_test.py
-      - name: Official WordPress Plugin Check - free representative
+      - name: Official WordPress Plugin Check - direct-download free representative
         uses: wordpress/plugin-check-action@v1
         with:
           repo-token: ''
-          build-dir: './build/self-test/nalapps-free-basic'
+          build-dir: './build/self-test/nalapps-free-download'
           categories: |
             security
             performance
