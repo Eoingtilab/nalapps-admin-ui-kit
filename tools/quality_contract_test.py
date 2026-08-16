@@ -43,6 +43,7 @@ def base_profile() -> dict:
         "description": "Synthetic contract fixture.",
         "plugin_version": "1.0.0",
         "product_type": "free",
+        "license_required": False,
         "frontend": True,
         "database": False,
         "cron": False,
@@ -63,6 +64,14 @@ def main() -> int:
     valid = base_profile()
     validate_profile(write_profile("valid-free", valid))
 
+    free_missing_license_contract = dict(valid)
+    free_missing_license_contract.pop("license_required")
+    expect_profile_fail("free-missing-license-required", free_missing_license_contract)
+
+    free_requires_license = dict(valid)
+    free_requires_license["license_required"] = True
+    expect_profile_fail("free-license-required-true", free_requires_license)
+
     unknown = dict(valid)
     unknown["unexpected_field"] = True
     expect_profile_fail("unknown-field", unknown)
@@ -77,6 +86,7 @@ def main() -> int:
 
     paid_missing = dict(valid)
     paid_missing["product_type"] = "edd_paid"
+    paid_missing.pop("license_required", None)
     paid_missing["external_api"] = True
     expect_profile_fail("paid-missing-edd-metadata", paid_missing)
 
@@ -85,6 +95,7 @@ def main() -> int:
     expect_profile_fail("sensitive-backup-option", sensitive_backup)
 
     paid = dict(valid)
+    paid.pop("license_required", None)
     paid.update(
         {
             "plugin_name": "Hyphenated Paid Fixture",
@@ -122,7 +133,7 @@ def main() -> int:
     if "'package'     => $this->package_url( $info )" not in updater_text:
         raise AssertionError("WordPress update transient must receive the executable package URL")
 
-    print("PASS quality_contract_test cases=7 edd_regression=3 privacy_regression=1")
+    print("PASS quality_contract_test cases=9 edd_regression=3 privacy_regression=1 free_license_regression=2")
     return 0
 
 
